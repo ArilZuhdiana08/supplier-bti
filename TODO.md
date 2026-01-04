@@ -9,7 +9,7 @@
 - [x] Move admin-monitor.html to root directory
 - [x] Move frontend/assets/ to root assets/
 - [x] Modify checkin.html to use localStorage instead of API calls
-- [x] Update netlify.toml to remove API redirects
+- [x] Update netlify.toml to remove API redirects and fix publish directory
 - [x] Add geofencing validation for gate location (P39P+9V2, Gandasari, Cikarang Barat, Bekasi)
 
 ### 🔄 Current Tasks
