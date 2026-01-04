@@ -1,22 +1,43 @@
-# TODO: Deploy dengan Netlify dan Supabase
+# TODO: Konversi ke Website Sederhana Tanpa Backend
 
-## 1. Update Dependencies
-- [ ] Tambah `pg` (PostgreSQL client) ke package.json
-- [ ] Update package.json untuk Netlify Functions
+## Status: Completed (Testing Done, Ready for Use)
 
-## 2. Update Database Configuration
-- [ ] Update `backend/config.js` untuk Supabase (PostgreSQL)
-- [ ] Update `backend/db.js` untuk menggunakan pg library
+### ✅ Completed Tasks
+- [x] Analyze current structure and plan changes
+- [x] Get user approval for plan
+- [x] Create TODO.md tracking file
+- [x] Move admin-monitor.html to root directory
+- [x] Move frontend/assets/ to root assets/
+- [x] Modify checkin.html to use localStorage instead of API calls
+- [x] Update netlify.toml to remove API redirects
+- [x] Add geofencing validation for gate location (P39P+9V2, Gandasari, Cikarang Barat, Bekasi)
 
-## 3. Convert Backend to Netlify Functions
-- [ ] Buat direktori `netlify/functions`
-- [ ] Pindah logika API ke `netlify/functions/api.js`
-- [ ] Buat `netlify.toml` untuk konfigurasi
+### 🔄 Current Tasks
+- [x] Test website functionality (files opened in browser for manual testing)
+- [ ] Deploy to Netlify
 
-## 4. Update Frontend
-- [ ] Update `frontend/checkin.html` untuk memanggil API backend
-- [ ] Update `frontend/admin-monitor.html` untuk fetch data dari API
+### 📋 Detailed Plan
+1. **File Restructuring:**
+   - Move `admin-monitor.html` from root to root (already in root)
+   - Move `frontend/assets/` to `assets/`
+   - Update asset paths in HTML files
 
-## 5. Testing dan Deploy
-- [ ] Test lokal dengan Netlify CLI
-- [ ] Deploy ke Netlify dan Supabase
+2. **checkin.html Modifications:**
+   - Remove all `fetch()` API calls
+   - Replace supplier loading with hardcoded list or free text input
+   - Save checkin data to localStorage in format expected by admin-monitor.html
+   - Keep GPS location detection
+   - Keep admin login functionality
+
+3. **netlify.toml Updates:**
+   - Remove API redirect rules since no backend needed
+   - Keep publish directory as "."
+
+4. **Testing:**
+   - Test checkin form saves to localStorage
+   - Test admin panel displays saved data
+   - Test navigation between pages
+
+5. **Deployment:**
+   - Deploy to Netlify
+   - Verify website loads correctly

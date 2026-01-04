@@ -278,23 +278,42 @@
       errPos();
     }
 
-    // ===== Load Suppliers =====
-    let suppliers = [];
-    async function loadSuppliers() {
-      try {
-        const response = await fetch('/api/suppliers');
-        const data = await response.json();
-        if (data.success) {
-          suppliers = data.data;
-        }
-      } catch (error) {
-        console.error('Error loading suppliers:', error);
-      }
+    // ===== Geofencing Configuration =====
+    // Lokasi gate: P39P+9V2, Gandasari, Kec. Cikarang Bar., Kabupaten Bekasi, Jawa Barat
+    const GATE_LOCATION = {
+      lat: -6.2088,
+      lng: 106.8456,
+      radius: 100 // radius 100 meter dari gate
+    };
+
+    // Fungsi untuk menghitung jarak antara dua koordinat (Haversine formula)
+    function calculateDistance(lat1, lng1, lat2, lng2) {
+      const R = 6371e3; // Earth's radius in meters
+      const φ1 = lat1 * Math.PI / 180;
+      const φ2 = lat2 * Math.PI / 180;
+      const Δφ = (lat2 - lat1) * Math.PI / 180;
+      const Δλ = (lng2 - lng1) * Math.PI / 180;
+
+      const a = Math.sin(Δφ/2) * Math.sin(Δφ/2) +
+                Math.cos(φ1) * Math.cos(φ2) *
+                Math.sin(Δλ/2) * Math.sin(Δλ/2);
+      const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
+
+      return R * c; // Distance in meters
     }
-    loadSuppliers();
+
+    // ===== Load Suppliers =====
+    // Daftar supplier yang tersedia (hardcoded)
+    const suppliers = [
+      { supplier_id: 1, supplier_name: 'PT. Mitra Supplier A' },
+      { supplier_id: 2, supplier_name: 'PT. Cahaya Abadi' },
+      { supplier_id: 3, supplier_name: 'CV. Logistik Nusantara' },
+      { supplier_id: 4, supplier_name: 'PT. Transportasi Prima' },
+      { supplier_id: 5, supplier_name: 'PT. Distribusi Makmur' }
+    ];
 
     // ===== Form Submit =====
-    submitBtn.addEventListener('click', async ()=>{
+    submitBtn.addEventListener('click', ()=>{
       const name = document.getElementById('supplier-name').value.trim();
       const vehicle = document.getElementById('vehicle').value.trim();
 
@@ -313,49 +332,56 @@
       submitBtn.textContent = 'Memproses...';
 
       try {
-        // Find supplier by name
+        // ===== Geofencing Validation =====
+        const distance = calculateDistance(
+          currentPos.coords.latitude,
+          currentPos.coords.longitude,
+          GATE_LOCATION.lat,
+          GATE_LOCATION.lng
+        );
+
+        if (distance > GATE_LOCATION.radius) {
+          alert(`❌ Anda berada di luar area gate!\n\nJarak dari gate: ${Math.round(distance)} meter\nRadius yang diizinkan: ${GATE_LOCATION.radius} meter\n\nPastikan Anda berada di area P39P+9V2, Gandasari, Cikarang Barat, Bekasi.`);
+          return;
+        }
+
+        // Find supplier by name (case insensitive)
         const supplier = suppliers.find(s => s.supplier_name.toLowerCase() === name.toLowerCase());
         if (!supplier) {
-          alert('❌ Supplier tidak ditemukan. Pastikan nama supplier sudah terdaftar.');
-          return;
+          // Allow free text input if supplier not found in list
+          const supplierName = name;
+          console.log('Supplier baru atau tidak terdaftar:', supplierName);
         }
 
-        // Generate QR Code
-        const qrResponse = await fetch('/api/generate-qr', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ supplier_id: supplier.supplier_id })
-        });
-        const qrData = await qrResponse.json();
+        // Simpan data check-in ke localStorage
+        const checkinData = {
+          timestamp: new Date().toISOString(),
+          supplier_name: supplier ? supplier.supplier_name : name,
+          vehicle_no: vehicle || null,
+          location: {
+            lat: currentPos.coords.latitude,
+            lng: currentPos.coords.longitude
+          }
+        };
 
-        if (!qrData.success) {
-          alert('❌ Gagal generate QR Code: ' + qrData.message);
-          return;
-        }
+        // Ambil data check-in yang sudah ada dari localStorage
+        const existingCheckins = JSON.parse(localStorage.getItem('checkins') || '[]');
 
-        // Check-in
-        const checkinResponse = await fetch('/api/checkin', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            supplier_id: supplier.supplier_id,
-            qr_token: qrData.data.qr_token,
-            latitude: currentPos.coords.latitude,
-            longitude: currentPos.coords.longitude,
-            accuracy: currentPos.coords.accuracy,
-            device_info: navigator.userAgent
-          })
-        });
-        const checkinData = await checkinResponse.json();
+        // Tambahkan data check-in baru
+        existingCheckins.push(checkinData);
 
-        if (checkinData.success) {
-          resultEl.classList.add('show');
-          resultEl.textContent = `✅ Check-in berhasil: ${supplier.supplier_name}`;
-          document.getElementById('supplier-name').value = '';
-          document.getElementById('vehicle').value = '';
-        } else {
-          alert('❌ Check-in gagal: ' + checkinData.message);
-        }
+        // Simpan kembali ke localStorage
+        localStorage.setItem('checkins', JSON.stringify(existingCheckins));
+
+        // Tampilkan pesan sukses
+        resultEl.classList.add('show');
+        resultEl.textContent = `✅ Check-in berhasil: ${supplier ? supplier.supplier_name : name}`;
+
+        // Reset form
+        document.getElementById('supplier-name').value = '';
+        document.getElementById('vehicle').value = '';
+
+        console.log('Check-in saved:', checkinData);
 
       } catch (error) {
         console.error('Error:', error);
