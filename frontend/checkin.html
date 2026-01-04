@@ -278,39 +278,92 @@
       errPos();
     }
 
+    // ===== Load Suppliers =====
+    let suppliers = [];
+    async function loadSuppliers() {
+      try {
+        const response = await fetch('/api/suppliers');
+        const data = await response.json();
+        if (data.success) {
+          suppliers = data.data;
+        }
+      } catch (error) {
+        console.error('Error loading suppliers:', error);
+      }
+    }
+    loadSuppliers();
+
     // ===== Form Submit =====
-    submitBtn.addEventListener('click', ()=>{
+    submitBtn.addEventListener('click', async ()=>{
       const name = document.getElementById('supplier-name').value.trim();
       const vehicle = document.getElementById('vehicle').value.trim();
 
-      if(!name){ 
+      if(!name){
         alert('⚠️ Nama supplier harus diisi');
         document.getElementById('supplier-name').focus();
         return;
       }
 
-      const payload = {
-        supplier_name: name,
-        vehicle_no: vehicle || null,
-        timestamp: new Date().toISOString(),
-        location: currentPos ? {
-          lat: currentPos.coords.latitude,
-          lng: currentPos.coords.longitude,
-          accuracy: currentPos.coords.accuracy
-        } : null
-      };
+      if(!currentPos){
+        alert('⚠️ Lokasi GPS belum tersedia');
+        return;
+      }
 
-      const existing = JSON.parse(localStorage.getItem('checkins')||'[]');
-      existing.unshift(payload);
-      localStorage.setItem('checkins', JSON.stringify(existing));
+      submitBtn.disabled = true;
+      submitBtn.textContent = 'Memproses...';
 
-      resultEl.classList.add('show');
-      resultEl.textContent = `✅ Check-in diterima: ${payload.supplier_name}`;
+      try {
+        // Find supplier by name
+        const supplier = suppliers.find(s => s.supplier_name.toLowerCase() === name.toLowerCase());
+        if (!supplier) {
+          alert('❌ Supplier tidak ditemukan. Pastikan nama supplier sudah terdaftar.');
+          return;
+        }
 
-      setTimeout(()=>{
-        document.getElementById('supplier-name').value = '';
-        document.getElementById('vehicle').value = '';
-      }, 500);
+        // Generate QR Code
+        const qrResponse = await fetch('/api/generate-qr', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ supplier_id: supplier.supplier_id })
+        });
+        const qrData = await qrResponse.json();
+
+        if (!qrData.success) {
+          alert('❌ Gagal generate QR Code: ' + qrData.message);
+          return;
+        }
+
+        // Check-in
+        const checkinResponse = await fetch('/api/checkin', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            supplier_id: supplier.supplier_id,
+            qr_token: qrData.data.qr_token,
+            latitude: currentPos.coords.latitude,
+            longitude: currentPos.coords.longitude,
+            accuracy: currentPos.coords.accuracy,
+            device_info: navigator.userAgent
+          })
+        });
+        const checkinData = await checkinResponse.json();
+
+        if (checkinData.success) {
+          resultEl.classList.add('show');
+          resultEl.textContent = `✅ Check-in berhasil: ${supplier.supplier_name}`;
+          document.getElementById('supplier-name').value = '';
+          document.getElementById('vehicle').value = '';
+        } else {
+          alert('❌ Check-in gagal: ' + checkinData.message);
+        }
+
+      } catch (error) {
+        console.error('Error:', error);
+        alert('❌ Terjadi kesalahan saat check-in');
+      } finally {
+        submitBtn.disabled = false;
+        submitBtn.textContent = 'Submit Check-in';
+      }
     });
 
     document.getElementById('vehicle').addEventListener('keypress', (e)=>{

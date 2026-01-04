@@ -1,14 +1,9 @@
 // Konfigurasi Aplikasi
 module.exports = {
-  // Database Configuration
+  // Database Configuration (Supabase)
   database: {
-    host: 'localhost',
-    user: 'root',
-    password: '', // Ubah sesuai password Anda
-    database: 'absensi_supplier',
-    waitForConnections: true,
-    connectionLimit: 10,
-    queueLimit: 0
+    connectionString: process.env.DATABASE_URL || 'postgresql://postgres:password@localhost:5432/absensi_supplier',
+    ssl: process.env.NODE_ENV === 'production' ? { rejectUnauthorized: false } : false
   },
 
   // Geofencing Configuration (Gate Receiving Area)
