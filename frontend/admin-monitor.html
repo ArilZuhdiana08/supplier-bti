@@ -1,0 +1,259 @@
+<!doctype html>
+<html lang="id">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Monitoring Kedatangan Supplier</title>
+
+<!-- EXPORT LIB -->
+<script src="https://cdn.jsdelivr.net/npm/xlsx/dist/xlsx.full.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/jspdf@2.5.1/dist/jspdf.umd.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/jspdf-autotable@3.5.28/dist/jspdf.plugin.autotable.min.js"></script>
+
+<style>
+  :root{
+    --primary:#8B2E2E;
+    --bg:#f2f4f8;
+    --card:#ffffff;
+    --text:#1f2937;
+    --muted:#6b7280;
+    --border:#e5e7eb;
+  }
+  *{box-sizing:border-box}
+  body{
+    margin:0;
+    font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Arial,sans-serif;
+    background:linear-gradient(180deg,#f7f8fb,#eef1f6);
+    color:var(--text);
+  }
+  header{
+    height:64px;
+    padding:0 20px;
+    display:flex;
+    align-items:center;
+    justify-content:space-between;
+    background:linear-gradient(135deg,#8B2E2E,#a23b3b);
+    color:#fff;
+    box-shadow:0 4px 14px rgba(0,0,0,.15);
+  }
+  header button{
+    background:rgba(255,255,255,.15);
+    border:none;
+    color:#fff;
+    padding:8px 16px;
+    border-radius:999px;
+    font-weight:600;
+    cursor:pointer;
+  }
+  main{
+    padding:20px;
+    max-width:1200px;
+    margin:auto;
+  }
+  .filter-bar{
+    background:#fff;
+    border-radius:14px;
+    padding:14px;
+    display:flex;
+    gap:10px;
+    flex-wrap:wrap;
+    align-items:center;
+    box-shadow:0 8px 24px rgba(0,0,0,.06);
+    margin-bottom:14px;
+  }
+  .filter-bar input,
+  .filter-bar select{
+    padding:10px 12px;
+    border-radius:10px;
+    border:1px solid var(--border);
+  }
+  .filter-bar button{
+    padding:10px 16px;
+    border-radius:999px;
+    border:none;
+    font-weight:600;
+    cursor:pointer;
+  }
+  .btn-primary{background:var(--primary);color:#fff}
+  .btn-secondary{background:#111;color:#fff}
+  .btn-disabled{opacity:.4;pointer-events:none}
+  .card{
+    background:#fff;
+    border-radius:18px;
+    box-shadow:0 12px 30px rgba(0,0,0,.08);
+    overflow:hidden;
+  }
+  table{
+    width:100%;
+    border-collapse:separate;
+    border-spacing:0 10px;
+    padding:12px;
+  }
+  thead th{
+    font-size:12px;
+    color:var(--muted);
+    text-transform:uppercase;
+    padding:6px 10px;
+    text-align:left;
+  }
+  tbody tr{
+    background:#f9fafb;
+    border-radius:14px;
+  }
+  tbody td{
+    padding:14px 12px;
+    font-size:14px;
+  }
+</style>
+</head>
+
+<body>
+
+<header>
+  <div>Receiving time</div>
+  <button id="logout">Logout</button>
+</header>
+
+<main>
+
+  <!-- FILTER & EXPORT -->
+  <div class="filter-bar">
+    <input type="date" id="filter-date">
+
+    <select id="filter-month">
+      <option value="">Semua Bulan</option>
+      <option value="0">Januari</option><option value="1">Februari</option>
+      <option value="2">Maret</option><option value="3">April</option>
+      <option value="4">Mei</option><option value="5">Juni</option>
+      <option value="6">Juli</option><option value="7">Agustus</option>
+      <option value="8">September</option><option value="9">Oktober</option>
+      <option value="10">November</option><option value="11">Desember</option>
+    </select>
+
+    <select id="filter-year">
+      <option value="">Semua Tahun</option>
+    </select>
+
+    <button id="reset-filter">Reset</button>
+
+    <button id="export-excel" class="btn-primary btn-disabled">Export Excel</button>
+    <button id="export-pdf" class="btn-secondary btn-disabled">Export PDF</button>
+  </div>
+
+  <!-- TABLE -->
+  <div class="card">
+    <table>
+      <thead>
+        <tr>
+          <th>Waktu</th>
+          <th>Supplier</th>
+          <th>Kendaraan</th>
+          <th>Lokasi</th>
+        </tr>
+      </thead>
+      <tbody id="tbody"></tbody>
+    </table>
+  </div>
+
+</main>
+
+<script>
+  const rawData = JSON.parse(localStorage.getItem('checkins') || '[]');
+  const tbody = document.getElementById('tbody');
+  const filterDate = document.getElementById('filter-date');
+  const filterMonth = document.getElementById('filter-month');
+  const filterYear = document.getElementById('filter-year');
+  const resetBtn = document.getElementById('reset-filter');
+  const exportExcelBtn = document.getElementById('export-excel');
+  const exportPdfBtn = document.getElementById('export-pdf');
+
+  let filteredData = [];
+
+  [...new Set(rawData.map(d=>new Date(d.timestamp).getFullYear()))]
+    .sort((a,b)=>b-a)
+    .forEach(y=>{
+      const o=document.createElement('option');
+      o.value=y;o.textContent=y;
+      filterYear.appendChild(o);
+    });
+
+  function renderTable(data){
+    tbody.innerHTML = data.length
+      ? data.map(d=>`
+        <tr>
+          <td>${new Date(d.timestamp).toLocaleString()}</td>
+          <td>${d.supplier_name}</td>
+          <td>${d.vehicle_no||'-'}</td>
+          <td>${d.location?d.location.lat.toFixed(4)+','+d.location.lng.toFixed(4):'-'}</td>
+        </tr>`).join('')
+      : '<tr><td colspan="4">Tidak ada data</td></tr>';
+  }
+
+  function applyFilter(){
+    filteredData = rawData.filter(d=>{
+      const dt = new Date(d.timestamp);
+      return (!filterDate.value || dt.toISOString().slice(0,10)===filterDate.value)
+        && (filterMonth.value==='' || dt.getMonth()==filterMonth.value)
+        && (filterYear.value==='' || dt.getFullYear()==filterYear.value);
+    });
+
+    renderTable(filteredData);
+
+    const active = filterDate.value || filterMonth.value!=='' || filterYear.value!=='';
+    exportExcelBtn.classList.toggle('btn-disabled', !active);
+    exportPdfBtn.classList.toggle('btn-disabled', !active);
+  }
+
+  filterDate.onchange = applyFilter;
+  filterMonth.onchange = applyFilter;
+  filterYear.onchange = applyFilter;
+
+  resetBtn.onclick = ()=>{
+    filterDate.value='';filterMonth.value='';filterYear.value='';
+    filteredData=[];
+    renderTable(rawData);
+    exportExcelBtn.classList.add('btn-disabled');
+    exportPdfBtn.classList.add('btn-disabled');
+  };
+
+  exportExcelBtn.onclick = ()=>{
+    if(!filteredData.length) return alert('Filter data terlebih dahulu');
+    const ws = XLSX.utils.json_to_sheet(filteredData.map(d=>({
+      Waktu:new Date(d.timestamp).toLocaleString(),
+      Supplier:d.supplier_name,
+      Kendaraan:d.vehicle_no||'-',
+      Lokasi:d.location?`${d.location.lat},${d.location.lng}`:'-'
+    })));
+    const wb = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb, ws, 'Kedatangan');
+    XLSX.writeFile(wb, 'kedatangan_supplier.xlsx');
+  };
+
+  exportPdfBtn.onclick = ()=>{
+    if(!filteredData.length) return alert('Filter data terlebih dahulu');
+    const { jsPDF } = window.jspdf;
+    const doc = new jsPDF();
+    doc.text('Monitoring Kedatangan Supplier',14,14);
+    doc.autoTable({
+      startY:20,
+      head:[['Waktu','Supplier','Kendaraan','Lokasi']],
+      body:filteredData.map(d=>[
+        new Date(d.timestamp).toLocaleString(),
+        d.supplier_name,
+        d.vehicle_no||'-',
+        d.location?`${d.location.lat},${d.location.lng}`:'-'
+      ])
+    });
+    doc.save('kedatangan_supplier.pdf');
+  };
+
+  renderTable(rawData);
+
+  // ✅ LOGOUT DIALIHKAN KE FORM CHECK-IN
+  document.getElementById('logout').onclick = () => {
+    sessionStorage.removeItem('adminLoggedIn');
+    window.location.href = 'checkin.html'; // kembali ke halaman input check-in
+  };
+</script>
+</body>
+</html>
