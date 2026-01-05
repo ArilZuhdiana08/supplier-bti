@@ -279,10 +279,10 @@
     }
 
     // ===== Geofencing Configuration =====
-    // Lokasi gate: P39P+9V2, Gandasari, Kec. Cikarang Bar., Kabupaten Bekasi, Jawa Barat
+    // Lokasi gate: 6°16'54.0"S 107°05'15.9"E (-6.281659, 107.087749)
     const GATE_LOCATION = {
-      lat: -6.2088,
-      lng: 106.8456,
+      lat: -6.281659,
+      lng: 107.087749,
       radius: 100 // radius 100 meter dari gate
     };
 
@@ -341,7 +341,7 @@
         );
 
         if (distance > GATE_LOCATION.radius) {
-          alert(`❌ Anda berada di luar area gate!\n\nJarak dari gate: ${Math.round(distance)} meter\nRadius yang diizinkan: ${GATE_LOCATION.radius} meter\n\nPastikan Anda berada di area P39P+9V2, Gandasari, Cikarang Barat, Bekasi.`);
+          alert(`❌ Anda berada di luar area gate!\n\nJarak dari gate: ${Math.round(distance)} meter\nRadius yang diizinkan: ${GATE_LOCATION.radius} meter\n\nPastikan Anda berada di area 6°16'54.0"S 107°05'15.9"E.`);
           return;
         }
 
