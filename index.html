@@ -64,6 +64,12 @@
     input[type=text]{width:100%;padding:12px;border-radius:8px;border:1px solid var(--border);margin-top:6px;font-size:16px;appearance:none}
     input[type=text]:focus{outline:none;border-color:var(--accent);box-shadow:0 0 0 3px rgba(11,110,253,0.1)}
     
+    input[type=time]{width:100%;padding:12px;border-radius:8px;border:1px solid var(--border);margin-top:6px;font-size:16px;appearance:none}
+    input[type=time]:focus{outline:none;border-color:var(--accent);box-shadow:0 0 0 3px rgba(11,110,253,0.1)}
+    
+    select{width:100%;padding:12px;border-radius:8px;border:1px solid var(--border);margin-top:6px;font-size:16px;appearance:none;background-image:url('data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMTIiIGhlaWdodD0iOCIgdmlld0JveD0iMCAwIDEyIDgiIGZpbGw9Im5vbmUiIHhtbG5zPSJodHRwOi8vd3d3LnczLm9yZy8yMDAwL3N2ZyI+CjxwYXRoIGQ9Ik0xIDFMNiA2TDExIDEiIHN0cm9rZT0iIzY2NiIgc3Ryb2tlLXdpZWRoPSIyIiBzdHJva2UtbGluZWNhcD0icm91bmQiIHN0cm9rZS1saW5lam9pbj0icm91bmQiLz4KPC9zdmc+');background-repeat:no-repeat;background-position:right 12px center;background-size:12px;padding-right:40px;}
+    select:focus{outline:none;border-color:var(--accent);box-shadow:0 0 0 3px rgba(11,110,253,0.1)}
+    
     .btn{display:inline-block;padding:12px 16px;background:#8B2E2E;color:#fff;border-radius:8px;border:none;cursor:pointer;margin-top:12px;font-size:14px;font-weight:600;transition:all .2s;touch-action:manipulation;min-height:48px;display:flex;align-items:center;justify-content:center}
     .btn:active{transform:scale(0.98);opacity:0.9}
     .btn.secondary{background:#eee;color:var(--text)}
@@ -93,6 +99,7 @@
       p.lead{font-size:15px}
       label{font-size:14px;margin-top:14px}
       input[type=text]{padding:12px;font-size:16px}
+      select{padding:12px;font-size:16px}
       .btn{padding:12px 20px;font-size:15px;min-height:50px}
     }
 
@@ -166,7 +173,9 @@
         <p class="lead">Masukkan nama supplier. Lokasi akan dicatat otomatis.</p>
 
         <label for="supplier-name">Nama Supplier *</label>
-        <input id="supplier-name" type="text" placeholder="Contoh: PT. Mitra Supplier A" required>
+        <select id="supplier-name" required style="width:100%;padding:12px;border-radius:8px;border:1px solid var(--border);margin-top:6px;font-size:16px;appearance:none;background-image:url('data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMTIiIGhlaWdodD0iOCIgdmlld0JveD0iMCAwIDEyIDgiIGZpbGw9Im5vbmUiIHhtbG5zPSJodHRwOi8vd3d3LnczLm9yZy8yMDAwL3N2ZyI+CjxwYXRoIGQ9Ik0xIDFMNiA2TDExIDEiIHN0cm9rZT0iIzY2NiIgc3Ryb2tlLXdpZHRoPSIyIiBzdHJva2UtbGluZWNhcD0icm91bmQiIHN0cm9rZS1saW5lam9pbj0icm91bmQiLz4KPC9zdmc+');background-repeat:no-repeat;background-position:right 12px center;background-size:12px;padding-right:40px;">
+          <option value="">Pilih nama supplier...</option>
+        </select>
 
         <label for="vehicle">No. Kendaraan (opsional)</label>
         <input id="vehicle" type="text" placeholder="Contoh: B 1234 ABC">
@@ -312,19 +321,37 @@
       { supplier_id: 5, supplier_name: 'PT. Distribusi Makmur' }
     ];
 
+    // Populate supplier select options
+    const supplierSelect = document.getElementById('supplier-name');
+    suppliers.forEach(supplier => {
+      const option = document.createElement('option');
+      option.value = supplier.supplier_name;
+      option.textContent = supplier.supplier_name;
+      supplierSelect.appendChild(option);
+    });
+
     // ===== Form Submit =====
     submitBtn.addEventListener('click', ()=>{
       const name = document.getElementById('supplier-name').value.trim();
       const vehicle = document.getElementById('vehicle').value.trim();
 
       if(!name){
-        alert('⚠️ Nama supplier harus diisi');
+        alert('⚠️ Pilih nama supplier terlebih dahulu');
         document.getElementById('supplier-name').focus();
         return;
       }
 
       if(!currentPos){
         alert('⚠️ Lokasi GPS belum tersedia');
+        return;
+      }
+
+      // Get reference time from admin panel settings
+      const supplierReferences = JSON.parse(localStorage.getItem('supplierReferences') || '{}');
+      const referenceTime = supplierReferences[name];
+
+      if(!referenceTime){
+        alert('⚠️ Waktu referensi untuk supplier ini belum diatur di panel admin.\n\nSilakan hubungi admin untuk mengatur waktu referensi terlebih dahulu.');
         return;
       }
 
@@ -345,12 +372,26 @@
           return;
         }
 
+        // ===== Calculate Status =====
+        const now = new Date();
+        const [refHours, refMinutes] = referenceTime.split(':').map(Number);
+        const referenceDateTime = new Date(now);
+        referenceDateTime.setHours(refHours, refMinutes, 0, 0);
+
+        const timeDiff = (now - referenceDateTime) / (1000 * 60); // difference in minutes
+        let status = 'Tepat waktu';
+
+        if (timeDiff < -10) {
+          status = 'Advance'; // More than 10 minutes early
+        } else if (timeDiff > 10) {
+          status = 'Delay'; // More than 10 minutes late
+        }
+
         // Find supplier by name (case insensitive)
         const supplier = suppliers.find(s => s.supplier_name.toLowerCase() === name.toLowerCase());
         if (!supplier) {
-          // Allow free text input if supplier not found in list
-          const supplierName = name;
-          console.log('Supplier baru atau tidak terdaftar:', supplierName);
+          // This shouldn't happen with select, but keep for safety
+          console.log('Supplier tidak ditemukan:', name);
         }
 
         // Simpan data check-in ke localStorage
@@ -358,6 +399,8 @@
           timestamp: new Date().toISOString(),
           supplier_name: supplier ? supplier.supplier_name : name,
           vehicle_no: vehicle || null,
+          reference_time: referenceTime,
+          status: status,
           location: {
             lat: currentPos.coords.latitude,
             lng: currentPos.coords.longitude
@@ -375,7 +418,7 @@
 
         // Tampilkan pesan sukses
         resultEl.classList.add('show');
-        resultEl.textContent = `✅ Check-in berhasil: ${supplier ? supplier.supplier_name : name}`;
+        resultEl.textContent = `✅ Check-in berhasil: ${supplier ? supplier.supplier_name : name} (${status})`;
 
         // Reset form
         document.getElementById('supplier-name').value = '';

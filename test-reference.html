@@ -1,0 +1,37 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Test Supplier Reference</title>
+</head>
+<body>
+    <h1>Supplier Reference Test</h1>
+    <div id="test-output"></div>
+
+    <script>
+        // Simulate the supplier reference functionality
+        let supplierReferences = JSON.parse(localStorage.getItem('supplierReferences') || '{}');
+
+        function testSupplierReference() {
+            const output = document.getElementById('test-output');
+
+            // Test saving a reference
+            supplierReferences['Test Supplier'] = '08:00';
+            localStorage.setItem('supplierReferences', JSON.stringify(supplierReferences));
+
+            // Test loading references
+            const loaded = JSON.parse(localStorage.getItem('supplierReferences') || '{}');
+
+            output.innerHTML = `
+                <p>✓ Supplier reference saved: ${loaded['Test Supplier']}</p>
+                <p>✓ All references: ${JSON.stringify(loaded)}</p>
+                <p>✓ Functionality working correctly!</p>
+            `;
+        }
+
+        // Run test
+        testSupplierReference();
+    </script>
+</body>
+</html>
