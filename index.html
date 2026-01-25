@@ -346,8 +346,11 @@
         return;
       }
 
-      // Get reference time from admin panel settings
-      const supplierReferences = JSON.parse(localStorage.getItem('supplierReferences') || '{}');
+      // Get reference time from admin panel settings via API
+      const supplierReferences = await fetch('/.netlify/functions/supplier-references')
+        .then(res => res.json())
+        .catch(() => ({}));
+
       const referenceTime = supplierReferences[name];
 
       if(!referenceTime){
@@ -394,7 +397,7 @@
           console.log('Supplier tidak ditemukan:', name);
         }
 
-        // Simpan data check-in ke localStorage
+        // Prepare check-in data
         const checkinData = {
           timestamp: new Date().toISOString(),
           supplier_name: supplier ? supplier.supplier_name : name,
@@ -407,14 +410,18 @@
           }
         };
 
-        // Ambil data check-in yang sudah ada dari localStorage
-        const existingCheckins = JSON.parse(localStorage.getItem('checkins') || '[]');
+        // Send data to API
+        const response = await fetch('/.netlify/functions/checkins', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json'
+          },
+          body: JSON.stringify(checkinData)
+        });
 
-        // Tambahkan data check-in baru
-        existingCheckins.push(checkinData);
-
-        // Simpan kembali ke localStorage
-        localStorage.setItem('checkins', JSON.stringify(existingCheckins));
+        if (!response.ok) {
+          throw new Error('Failed to save check-in data');
+        }
 
         // Tampilkan pesan sukses
         resultEl.classList.add('show');

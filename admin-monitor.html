@@ -593,7 +593,7 @@
 
 <script>
   // DOM Elements
-  const rawData = JSON.parse(localStorage.getItem('checkins') || '[]');
+  const rawData = [];
   const tbody = document.getElementById('tbody');
   const filterDate = document.getElementById('filter-date');
   const filterMonth = document.getElementById('filter-month');
@@ -617,20 +617,11 @@
   const sections = document.querySelectorAll('.section');
   const supplierReferenceList = document.getElementById('supplier-reference-list');
 
-  // Daftar supplier yang tersedia (sesuai form input)
-  const suppliers = [
-    { supplier_id: 1, supplier_name: 'PT. Mitra Supplier A' },
-    { supplier_id: 2, supplier_name: 'PT. Cahaya Abadi' },
-    { supplier_id: 3, supplier_name: 'CV. Logistik Nusantara' },
-    { supplier_id: 4, supplier_name: 'PT. Transportasi Prima' },
-    { supplier_id: 5, supplier_name: 'PT. Distribusi Makmur' }
-  ];
-
   let filteredData = [];
   let currentSection = 'statistics';
 
-  // Supplier reference times (stored in localStorage)
-  let supplierReferences = JSON.parse(localStorage.getItem('supplierReferences') || '{}');
+  // Supplier reference times (loaded from API)
+  let supplierReferences = {};
 
   // Hamburger Menu Toggle
   function toggleMenu() {
@@ -783,25 +774,58 @@
   }
 
   // Supplier Reference Management
-  function loadSupplierReferences() {
-    supplierReferenceList.innerHTML = suppliers.map(supplier => `
-      <div class="supplier-reference-item">
-        <div class="supplier-name">${supplier.supplier_name}</div>
-        <input type="time" id="ref-${supplier.supplier_name.replace(/\s+/g, '-').toLowerCase()}"
-               value="${supplierReferences[supplier.supplier_name] || ''}">
-        <button onclick="saveSupplierReference('${supplier.supplier_name}')">Simpan</button>
-      </div>
-    `).join('');
+  async function loadSupplierReferences() {
+    try {
+      const response = await fetch('/.netlify/functions/supplier-references');
+      if (response.ok) {
+        supplierReferences = await response.json();
+
+        // Get unique supplier names from check-ins
+        const uniqueSuppliers = [...new Set(rawData.map(d => d.supplier_name))];
+
+        supplierReferenceList.innerHTML = uniqueSuppliers.map(supplier => `
+          <div class="supplier-reference-item">
+            <div class="supplier-name">${supplier}</div>
+            <input type="time" id="ref-${supplier.replace(/\s+/g, '-').toLowerCase()}"
+                   value="${supplierReferences[supplier] || ''}">
+            <button onclick="saveSupplierReference('${supplier}')">Simpan</button>
+          </div>
+        `).join('');
+      } else {
+        console.error('Failed to load supplier references');
+      }
+    } catch (error) {
+      console.error('Error loading supplier references:', error);
+    }
   }
 
-  function saveSupplierReference(supplierName) {
+  async function saveSupplierReference(supplierName) {
     const inputId = `ref-${supplierName.replace(/\s+/g, '-').toLowerCase()}`;
     const timeValue = document.getElementById(inputId).value;
 
     if (timeValue) {
-      supplierReferences[supplierName] = timeValue;
-      localStorage.setItem('supplierReferences', JSON.stringify(supplierReferences));
-      alert(`Waktu referensi untuk ${supplierName} berhasil disimpan!`);
+      try {
+        const response = await fetch('/.netlify/functions/supplier-references', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json'
+          },
+          body: JSON.stringify({
+            supplier_name: supplierName,
+            reference_time: timeValue
+          })
+        });
+
+        if (response.ok) {
+          supplierReferences[supplierName] = timeValue;
+          alert(`Waktu referensi untuk ${supplierName} berhasil disimpan!`);
+        } else {
+          throw new Error('Failed to save supplier reference');
+        }
+      } catch (error) {
+        console.error('Error saving supplier reference:', error);
+        alert('Gagal menyimpan waktu referensi. Silakan coba lagi.');
+      }
     } else {
       alert('Silakan pilih waktu referensi terlebih dahulu.');
     }
@@ -856,9 +880,25 @@
     doc.save('kedatangan_supplier.pdf');
   };
 
+  // Load data from API
+  async function loadCheckins() {
+    try {
+      const response = await fetch('/.netlify/functions/checkins');
+      if (response.ok) {
+        rawData.length = 0; // Clear array
+        rawData.push(...await response.json());
+        updateStatistics();
+        renderTable(rawData);
+      } else {
+        console.error('Failed to load check-ins');
+      }
+    } catch (error) {
+      console.error('Error loading check-ins:', error);
+    }
+  }
+
   // Initialize
-  updateStatistics();
-  renderTable(rawData);
+  loadCheckins();
 </script>
 </body>
 </html>

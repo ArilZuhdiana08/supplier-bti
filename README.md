@@ -1,53 +1,145 @@
-# 📱 Sistem Absensi Supplier - Project Overview
+# Supplier BTI - Check-in Monitoring System
 
-## 🎯 Tujuan Project
+Sistem monitoring kedatangan supplier dengan database bersama untuk akses multi-user.
 
-Mengganti sistem absensi supplier yang **manual, lambat, dan mudah dimanipulasi** menjadi sistem yang **otomatis, realtime, dan anti-manipulasi** menggunakan:
+## 🚀 Fitur
 
-✅ **QR Code** - Unique token per session  
-✅ **GPS Geofencing** - Validasi lokasi 100m dari gate  
-✅ **Server Timestamp** - Waktu dari server (tidak bisa di-rekayasa)  
-✅ **Database Realtime** - MySQL (bukan spreadsheet)  
-✅ **Audit Trail** - Log semua aktivitas  
+- ✅ Check-in supplier dengan GPS tracking
+- ✅ Validasi geofencing area gate
+- ✅ Kalkulasi status (Advance/Tepat waktu/Delay)
+- ✅ Dashboard admin dengan statistik real-time
+- ✅ Filter dan export data (Excel/PDF)
+- ✅ Pengaturan waktu referensi supplier
+- ✅ **Database bersama untuk multi-user access**
 
----
+## 🛠️ Setup Database (Supabase)
 
-## ❌ Masalah Lama vs ✅ Solusi Baru
+### 1. Buat Akun Supabase
+1. Kunjungi [supabase.com](https://supabase.com)
+2. Buat akun baru atau login
+3. Buat project baru
 
-| Aspek | ❌ Sebelum | ✅ Sekarang |
-|-------|----------|----------|
-| **Input** | Manual form Google (5-10 menit) | Scan QR Code (10-20 detik) |
-| **Data** | Spreadsheet offline, bisa edit kapan saja | Database realtime, immutable |
-| **Timestamp** | Client-side (bisa di-rekayasa) | Server-side (asli, verified) |
-| **Validasi** | Tidak ada validasi lokasi | GPS + Geofencing validation |
-| **Duplicate** | Bisa double check-in | Cegah (1x per 15 menit) |
-| **Audit Trail** | Tidak ada tracking | Lengkap (aksi, waktu, lokasi, device) |
-| **Realtime** | Delay, manual sync | Real-time database updates |
+### 2. Setup Database Tables
 
----
+Jalankan SQL berikut di Supabase SQL Editor:
 
-## 🏗️ Architecture Overview
+```sql
+-- Tabel untuk menyimpan data check-in
+CREATE TABLE checkins (
+  id SERIAL PRIMARY KEY,
+  timestamp TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+  supplier_name TEXT NOT NULL,
+  vehicle_no TEXT,
+  reference_time TEXT NOT NULL,
+  status TEXT NOT NULL,
+  location JSONB NOT NULL
+);
+
+-- Tabel untuk menyimpan waktu referensi supplier
+CREATE TABLE supplier_references (
+  id SERIAL PRIMARY KEY,
+  supplier_name TEXT UNIQUE NOT NULL,
+  reference_time TEXT NOT NULL,
+  created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+  updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+);
+
+-- Enable Row Level Security (RLS)
+ALTER TABLE checkins ENABLE ROW LEVEL SECURITY;
+ALTER TABLE supplier_references ENABLE ROW LEVEL SECURITY;
+
+-- Buat policies untuk public access (sesuai kebutuhan security)
+CREATE POLICY "Allow all operations on checkins" ON checkins FOR ALL USING (true);
+CREATE POLICY "Allow all operations on supplier_references" FOR ALL USING (true);
+```
+
+### 3. Dapatkan API Keys
+
+1. Pergi ke **Settings** → **API**
+2. Copy:
+   - `Project URL`
+   - `anon public` key
+
+## 🚀 Deployment
+
+### Environment Variables
+
+Tambahkan environment variables di Netlify:
+
+1. Buka **Site settings** → **Environment variables**
+2. Tambahkan:
+   ```
+   SUPABASE_URL=your_supabase_project_url
+   SUPABASE_ANON_KEY=your_supabase_anon_key
+   ```
+
+### Deploy ke Netlify
+
+1. Push kode ke GitHub
+2. Import project di Netlify dari GitHub
+3. Netlify akan auto-deploy dengan functions
+4. Website siap digunakan!
+
+## 📊 Cara Penggunaan
+
+### Untuk Supplier (User)
+1. Buka halaman check-in
+2. Pilih nama supplier
+3. Masukkan nomor kendaraan (opsional)
+4. Pastikan GPS aktif
+5. Klik "Submit Check-in"
+
+### Untuk Admin
+1. Buka halaman admin
+2. Lihat dashboard statistik
+3. Filter data check-in
+4. Export laporan
+5. Atur waktu referensi supplier
+
+## 🔧 API Endpoints
+
+- `GET /.netlify/functions/checkins` - Ambil semua data check-in
+- `POST /.netlify/functions/checkins` - Simpan check-in baru
+- `GET /.netlify/functions/supplier-references` - Ambil waktu referensi
+- `POST /.netlify/functions/supplier-references` - Simpan waktu referensi
+
+## 📁 Struktur Project
 
 ```
-┌──────────────────────────────────────────────────────────────┐
-│                   FRONTEND / MOBILE                          │
-│          (HTML, React, React Native, Flutter)               │
-│                                                              │
-│  - QR Code Scanner                                           │
-│  - GPS Location Capture                                      │
-│  - Check-in Form                                             │
-│  - Dashboard Monitoring                                      │
-└────────────────────┬─────────────────────────────────────────┘
-                     │ HTTP/HTTPS API
-                     ↓
-┌──────────────────────────────────────────────────────────────┐
-│              BACKEND API (Node.js + Express)                 │
-│           ✅ COMPLETE - Ready for integration               │
-│                                                              │
-│  Endpoints:                                                  │
-│  ✓ GET /api/suppliers                                        │
-│  ✓ POST /api/generate-qr                                     │
-│  ✓ POST /api/checkin (with validations)                      │
+supplier-bti/
+├── index.html              # Form check-in supplier
+├── admin-monitor.html      # Dashboard admin
+├── netlify.toml           # Konfigurasi Netlify
+├── package.json           # Dependencies
+├── assets/                # Gambar dan file statis
+│   └── logo.png
+└── netlify/
+    └── functions/         # Serverless functions
+        ├── checkins.js
+        └── supplier-references.js
+```
+
+## 🔒 Keamanan
+
+**PENTING:** Konfigurasi saat ini mengizinkan public access ke database. Untuk production:
+
+1. Implementasikan autentikasi user
+2. Buat RLS policies yang lebih ketat
+3. Gunakan service role key untuk operasi admin
+4. Tambahkan rate limiting
+
+## 🆘 Troubleshooting
+
+### Error: "Waktu referensi belum diatur"
+- Admin perlu mengatur waktu referensi supplier terlebih dahulu di panel admin
+
+### Error: "Lokasi GPS tidak tersedia"
+- Pastikan GPS device aktif
+- Berikan permission lokasi ke browser
+
+### Functions tidak berfungsi
+- Pastikan environment variables sudah benar
+- Check Netlify function logs
 │  ✓ GET /api/checkins/today                                   │
 │  ✓ GET /api/audit-logs/:id                                   │
 │                                                              │
@@ -419,6 +511,8 @@ Next: Frontend development untuk check-in interface.
  
  #   r e c e i v i n g 
  
- #   r e c e i v i n g b t i  
- #   s u p p l i e r - b t i  
+ #   r e c e i v i n g b t i 
+ 
+ #   s u p p l i e r - b t i 
+ 
  
