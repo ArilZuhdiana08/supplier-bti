@@ -359,10 +359,19 @@
         return;
       }
 
-      // Get reference time from admin panel settings via API
-      const supplierReferences = await fetch('/.netlify/functions/supplier-references')
-        .then(res => res.json())
-        .catch(() => ({}));
+      // Get reference time from admin panel settings via API or localStorage
+      let supplierReferences = {};
+      try {
+        const response = await fetch('/.netlify/functions/supplier-references');
+        if (response.ok) {
+          supplierReferences = await response.json();
+        } else {
+          supplierReferences = JSON.parse(localStorage.getItem('supplierReferences') || '{}');
+        }
+      } catch (error) {
+        console.warn('API not available, using localStorage for supplier references');
+        supplierReferences = JSON.parse(localStorage.getItem('supplierReferences') || '{}');
+      }
 
       const referenceTime = supplierReferences[name];
 

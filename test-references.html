@@ -1,0 +1,97 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Test Supplier References</title>
+    <style>
+        .supplier-reference-item {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            margin: 10px 0;
+            padding: 10px;
+            border: 1px solid #ccc;
+            border-radius: 5px;
+        }
+        .supplier-name {
+            flex: 1;
+            font-weight: bold;
+        }
+        input[type="time"] {
+            padding: 5px;
+        }
+        button {
+            padding: 5px 10px;
+            background: #007bff;
+            color: white;
+            border: none;
+            border-radius: 3px;
+            cursor: pointer;
+        }
+    </style>
+</head>
+<body>
+    <h1>Test Supplier Reference Management</h1>
+    <div id="supplier-reference-list">
+        <!-- Will be populated by JavaScript -->
+    </div>
+
+    <script>
+        let supplierReferences = JSON.parse(localStorage.getItem('supplierReferences') || '{}');
+
+        // Use all suppliers from the hardcoded list
+        const allSuppliers = [
+          'PT. TENMA INDONESIA',
+          'PT. INOAC POLYTHECNO INDONESIA',
+          'PT. SIGMA INTI PRESISI',
+          'PT. ATEJA KAWASHIMA',
+          'PT. YKK ZIPPER INDONESIA',
+          'PT. SEIREN INDONESIA',
+          'PT. SINAR SUMINOE',
+          'PT. NISSHO INDUSTRI INDONESIA',
+          'PT. ENDOTA SINAR INDONESIA',
+          'PT. PRIMARAYA GRAHA NUSANTARA',
+          'PT. TOYO QUALITY ONE',
+          'PT. ARMSTRONG INDONESIA',
+          'PT. MEIWA',
+          'PT. RAJAWALI MITRA PRATAMA',
+          'PT. MEIHOKU',
+          'PT. SERVVO INDONESIA',
+          'PT. INDAH VARIA EKA SELARAS',
+          'PT. BONECOM TRICOM (TEGAL)'
+        ];
+
+        const supplierReferenceList = document.getElementById('supplier-reference-list');
+
+        function loadSupplierReferences() {
+            supplierReferenceList.innerHTML = allSuppliers.map(supplier => `
+              <div class="supplier-reference-item">
+                <div class="supplier-name">${supplier}</div>
+                <input type="time" id="ref-${supplier.replace(/\s+/g, '-').toLowerCase()}"
+                       value="${supplierReferences[supplier] || ''}">
+                <button onclick="saveSupplierReference('${supplier}')">Simpan</button>
+              </div>
+            `).join('');
+        }
+
+        async function saveSupplierReference(supplierName) {
+            const inputId = `ref-${supplierName.replace(/\s+/g, '-').toLowerCase()}`;
+            const timeValue = document.getElementById(inputId).value;
+
+            if (timeValue) {
+                // Store locally for testing
+                supplierReferences[supplierName] = timeValue;
+                localStorage.setItem('supplierReferences', JSON.stringify(supplierReferences));
+                alert(`Waktu referensi untuk ${supplierName} berhasil disimpan!`);
+            } else {
+                alert('Silakan pilih waktu referensi terlebih dahulu.');
+            }
+        }
+
+        // Make function global
+        window.saveSupplierReference = saveSupplierReference;
+
+        // Load references on page load
+        loadSupplierReferences();
+    </script>
+</body>
+</html>

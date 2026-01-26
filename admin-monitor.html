@@ -779,24 +779,45 @@
       const response = await fetch('/.netlify/functions/supplier-references');
       if (response.ok) {
         supplierReferences = await response.json();
-
-        // Get unique supplier names from check-ins
-        const uniqueSuppliers = [...new Set(rawData.map(d => d.supplier_name))];
-
-        supplierReferenceList.innerHTML = uniqueSuppliers.map(supplier => `
-          <div class="supplier-reference-item">
-            <div class="supplier-name">${supplier}</div>
-            <input type="time" id="ref-${supplier.replace(/\s+/g, '-').toLowerCase()}"
-                   value="${supplierReferences[supplier] || ''}">
-            <button onclick="saveSupplierReference('${supplier}')">Simpan</button>
-          </div>
-        `).join('');
       } else {
-        console.error('Failed to load supplier references');
+        console.warn('Failed to load supplier references from API, trying localStorage');
+        supplierReferences = JSON.parse(localStorage.getItem('supplierReferences') || '{}');
       }
     } catch (error) {
-      console.error('Error loading supplier references:', error);
+      console.warn('Error loading supplier references from API, using localStorage:', error);
+      supplierReferences = JSON.parse(localStorage.getItem('supplierReferences') || '{}');
     }
+
+    // Use all suppliers from the hardcoded list, not just those with check-ins
+    const allSuppliers = [
+      'PT. TENMA INDONESIA',
+      'PT. INOAC POLYTHECNO INDONESIA',
+      'PT. SIGMA INTI PRESISI',
+      'PT. ATEJA KAWASHIMA',
+      'PT. YKK ZIPPER INDONESIA',
+      'PT. SEIREN INDONESIA',
+      'PT. SINAR SUMINOE',
+      'PT. NISSHO INDUSTRI INDONESIA',
+      'PT. ENDOTA SINAR INDONESIA',
+      'PT. PRIMARAYA GRAHA NUSANTARA',
+      'PT. TOYO QUALITY ONE',
+      'PT. ARMSTRONG INDONESIA',
+      'PT. MEIWA',
+      'PT. RAJAWALI MITRA PRATAMA',
+      'PT. MEIHOKU',
+      'PT. SERVVO INDONESIA',
+      'PT. INDAH VARIA EKA SELARAS',
+      'PT. BONECOM TRICOM (TEGAL)'
+    ];
+
+    supplierReferenceList.innerHTML = allSuppliers.map(supplier => `
+      <div class="supplier-reference-item">
+        <div class="supplier-name">${supplier}</div>
+        <input type="time" id="ref-${supplier.replace(/\s+/g, '-').toLowerCase()}"
+               value="${supplierReferences[supplier] || ''}">
+        <button onclick="saveSupplierReference('${supplier}')">Simpan</button>
+      </div>
+    `).join('');
   }
 
   async function saveSupplierReference(supplierName) {
@@ -820,11 +841,22 @@
           supplierReferences[supplierName] = timeValue;
           alert(`Waktu referensi untuk ${supplierName} berhasil disimpan!`);
         } else {
-          throw new Error('Failed to save supplier reference');
+          // For local development, store in localStorage as fallback
+          console.warn('API not available, storing locally');
+          const localRefs = JSON.parse(localStorage.getItem('supplierReferences') || '{}');
+          localRefs[supplierName] = timeValue;
+          localStorage.setItem('supplierReferences', JSON.stringify(localRefs));
+          supplierReferences[supplierName] = timeValue;
+          alert(`Waktu referensi untuk ${supplierName} disimpan secara lokal (untuk development)!`);
         }
       } catch (error) {
         console.error('Error saving supplier reference:', error);
-        alert('Gagal menyimpan waktu referensi. Silakan coba lagi.');
+        // Fallback to localStorage for development
+        const localRefs = JSON.parse(localStorage.getItem('supplierReferences') || '{}');
+        localRefs[supplierName] = timeValue;
+        localStorage.setItem('supplierReferences', JSON.stringify(localRefs));
+        supplierReferences[supplierName] = timeValue;
+        alert(`Waktu referensi untuk ${supplierName} disimpan secara lokal (mode offline)!`);
       }
     } else {
       alert('Silakan pilih waktu referensi terlebih dahulu.');
