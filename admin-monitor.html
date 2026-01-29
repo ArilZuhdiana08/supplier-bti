@@ -682,7 +682,10 @@
               ${d.status || 'Tepat waktu'}
             </span>
           </td>
-          <td>${d.location ? `${d.location.lat},${d.location.lng}` : '-'}</td>
+            <td>${d.location?.lat && d.location?.lng
+              ? `${d.location.lat},${d.location.lng}`
+              : 'PT. Bonecom Tricom Plant KIMU'}
+            </td>
         </tr>
       `).join('')
       : `<tr><td colspan="5">Tidak ada data</td></tr>`;
