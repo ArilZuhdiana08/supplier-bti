@@ -780,12 +780,72 @@
         `).join('')
       : '<div class="ranking-item">Belum ada data</div>';
   }
+  // ================================
+  // SUPPLIER REFERENCE
+  // ================================
+  const allSuppliers = [
+    'PT. TENMA INDONESIA',
+    'PT. INOAC POLYTHECNO INDONESIA',
+    'PT. SIGMA INTI PRESISI',
+    'PT. ATEJA KAWASHIMA',
+    'PT. YKK ZIPPER INDONESIA',
+    'PT. SEIREN INDONESIA',
+    'PT. SINAR SUMINOE',
+    'PT. NISSHO INDUSTRI INDONESIA',
+    'PT. ENDOTA SINAR INDONESIA',
+    'PT. PRIMARAYA GRAHA NUSANTARA',
+    'PT. TOYO QUALITY ONE',
+    'PT. ARMSTRONG INDONESIA',
+    'PT. MEIWA',
+    'PT. RAJAWALI MITRA PRATAMA',
+    'PT. MEIHOKU',
+    'PT. SERVVO INDONESIA',
+    'PT. INDAH VARIA EKA SELARAS',
+    'PT. BONECOM TRICOM (TEGAL)'
+  ];
 
+  function loadSupplierReferences() {
+    supplierReferences = JSON.parse(
+      localStorage.getItem('supplierReferences') || '{}'
+    );
+
+    supplierReferenceList.innerHTML = allSuppliers.map(supplier => {
+      const id = `ref-${supplier.replace(/\s+/g, '-').toLowerCase()}`;
+      return `
+        <div class="supplier-reference-item">
+          <div class="supplier-name">${supplier}</div>
+          <input type="time" id="${id}" value="${supplierReferences[supplier] || ''}">
+          <button onclick="saveSupplierReference('${supplier}')">Simpan</button>
+        </div>
+      `;
+    }).join('');
+  }
+
+  function saveSupplierReference(supplierName) {
+    const inputId = `ref-${supplierName.replace(/\s+/g, '-').toLowerCase()}`;
+    const timeValue = document.getElementById(inputId).value;
+
+    if (!timeValue) {
+      alert('Silakan pilih waktu terlebih dahulu');
+      return;
+    }
+
+    supplierReferences[supplierName] = timeValue;
+    localStorage.setItem(
+      'supplierReferences',
+      JSON.stringify(supplierReferences)
+    );
+
+    alert(`Waktu referensi ${supplierName} disimpan (${timeValue})`);
+  }
+
+  // expose
+  window.saveSupplierReference = saveSupplierReference;
   // ================================
   // INIT
   // ================================
   loadCheckins();
 </script>
-<script src="/js/arrival-filter.js"></scrip>
+<script src="/js/arrival-filter.js"></script>
 </body>
 </html>
