@@ -565,8 +565,7 @@
           <tr>
             <th>Waktu</th>
             <th>Supplier</th>
-            <th>Reference Time</th>
-            <th>No Kendaraan</th>
+            <th>Kendaraan</th>
             <th>Status</th>
             <th>Lokasi</th>
           </tr>
@@ -594,253 +593,199 @@
 </main>
 
 <script>
-/* ======================================
-   GLOBAL STATE
-====================================== */
-const rawData = [];
-let filteredData = [];
-let supplierReferences = {}; // { supplier_name: "HH:mm" }
+  // ================================
+  // GLOBAL STATE
+  // ================================
+  const rawData = [];
+  let filteredData = [];
 
-/* ======================================
-   DOM ELEMENTS
-====================================== */
-const tbody = document.getElementById('tbody');
-const filterDate = document.getElementById('filter-date');
-const filterMonth = document.getElementById('filter-month');
-const filterYear = document.getElementById('filter-year');
-const resetBtn = document.getElementById('reset-filter');
-const exportExcelBtn = document.getElementById('export-excel');
-const exportPdfBtn = document.getElementById('export-pdf');
+  // ================================
+  // DOM ELEMENTS
+  // ================================
+  const tbody = document.getElementById('tbody');
+  const filterDate = document.getElementById('filter-date');
+  const filterMonth = document.getElementById('filter-month');
+  const filterYear = document.getElementById('filter-year');
+  const resetBtn = document.getElementById('reset-filter');
+  const exportExcelBtn = document.getElementById('export-excel');
+  const exportPdfBtn = document.getElementById('export-pdf');
 
-const totalCheckinsEl = document.getElementById('total-checkins');
-const uniqueSuppliersEl = document.getElementById('unique-suppliers');
-const avgDailyEl = document.getElementById('avg-daily');
-const topSupplierCountEl = document.getElementById('top-supplier-count');
-const supplierRankingEl = document.getElementById('supplier-ranking');
+  const totalCheckinsEl = document.getElementById('total-checkins');
+  const uniqueSuppliersEl = document.getElementById('unique-suppliers');
+  const avgDailyEl = document.getElementById('avg-daily');
+  const topSupplierCountEl = document.getElementById('top-supplier-count');
+  const supplierRankingEl = document.getElementById('supplier-ranking');
 
-const hamburger = document.getElementById('hamburger');
-const hamburgerMenu = document.getElementById('hamburger-menu');
-const menuOverlay = document.getElementById('menu-overlay');
-const menuItems = document.querySelectorAll('.menu-item');
-const sections = document.querySelectorAll('.section');
-const supplierReferenceList = document.getElementById('supplier-reference-list');
+  const hamburger = document.getElementById('hamburger');
+  const hamburgerMenu = document.getElementById('hamburger-menu');
+  const menuOverlay = document.getElementById('menu-overlay');
+  const menuItems = document.querySelectorAll('.menu-item');
+  const sections = document.querySelectorAll('.section');
+  const supplierReferenceList = document.getElementById('supplier-reference-list');
 
-/* ======================================
-   MENU
-====================================== */
-hamburger.onclick = () => {
-  hamburgerMenu.classList.toggle('open');
-  menuOverlay.classList.toggle('open');
-};
+  let currentSection = 'statistics';
+  let supplierReferences = {};
 
-menuOverlay.onclick = () => {
-  hamburgerMenu.classList.remove('open');
-  menuOverlay.classList.remove('open');
-};
+  // ================================
+  // MENU
+  // ================================
+  hamburger.onclick = () => {
+    hamburgerMenu.classList.toggle('open');
+    menuOverlay.classList.toggle('open');
+  };
 
-menuItems.forEach(item => {
-  item.onclick = () => {
-    if (item.id === 'logout') {
-      sessionStorage.removeItem('adminLoggedIn');
-      location.href = 'index.html';
-      return;
-    }
-
-    const section = item.dataset.section;
-    sections.forEach(s => s.classList.remove('active'));
-    document.getElementById(section + '-section').classList.add('active');
-
-    menuItems.forEach(m => m.classList.remove('active'));
-    item.classList.add('active');
-
+  menuOverlay.onclick = () => {
     hamburgerMenu.classList.remove('open');
     menuOverlay.classList.remove('open');
-
-    if (section === 'filter') {
-      renderTable(filteredData);
-    }
-
-    if (section === 'reference') {
-      loadSupplierReferencesUI();
-    }
   };
-});
 
-/* ======================================
-   FETCH SUPPLIER REFERENCES (🔥 FIX)
-====================================== */
-async function fetchSupplierReferences() {
-  const res = await fetch('/.netlify/functions/supplier-references');
-  const data = await res.json();
+  menuItems.forEach(item => {
+    item.onclick = () => {
+      if (item.id === 'logout') {
+        sessionStorage.removeItem('adminLoggedIn');
+        location.href = 'index.html';
+        return;
+      }
 
-  supplierReferences = {};
-  data.forEach(r => {
-    supplierReferences[r.supplier_name] = r.reference_time;
-  });
-}
+      const section = item.dataset.section;
+      sections.forEach(s => s.classList.remove('active'));
+      document.getElementById(section + '-section').classList.add('active');
 
-/* ======================================
-   LOAD CHECKINS (🔥 FIX UTAMA)
-====================================== */
-async function loadCheckins() {
-  try {
-    // 🔥 PENTING: ambil reference DULU
-    await fetchSupplierReferences();
+      menuItems.forEach(m => m.classList.remove('active'));
+      item.classList.add('active');
 
-    const res = await fetch('/.netlify/functions/checkins');
-    const data = await res.json();
+      hamburgerMenu.classList.remove('open');
+      menuOverlay.classList.remove('open');
 
-    rawData.length = 0;
-    rawData.push(...data);
-    filteredData = [...rawData];
+      if (section === 'filter') {
+        renderTable(filteredData);
+      }
 
-    // Populate year filter
-    filterYear.innerHTML = '<option value="">Semua Tahun</option>';
-    [...new Set(rawData.map(d => new Date(d.timestamp).getFullYear()))]
-      .sort((a, b) => b - a)
-      .forEach(y => {
-        const o = document.createElement('option');
-        o.value = y;
-        o.textContent = y;
-        filterYear.appendChild(o);
-      });
-
-    updateStatistics();
-    renderTable(filteredData);
-
-  } catch (err) {
-    console.error('Load error:', err);
-  }
-}
-
-/* ======================================
-   RENDER TABLE (🔥 REFERENCE MUNCUL)
-====================================== */
-function renderTable(data) {
-  tbody.innerHTML = data.length
-    ? data.map(d => `
-      <tr>
-        <td>${new Date(d.timestamp).toLocaleString()}</td>
-        <td>${d.supplier_name}</td>
-        <td>${supplierReferences[d.supplier_name] || '-'}</td>
-        <td>${d.vehicle_no || '-'}</td>
-        <td>
-          <span class="status-badge status-${(d.status || 'Tepat waktu').toLowerCase()}">
-            ${d.status || 'Tepat waktu'}
-          </span>
-        </td>
-        <td>${d.location ? `${d.location.lat},${d.location.lng}` : '-'}</td>
-      </tr>
-    `).join('')
-    : `<tr><td colspan="6">Tidak ada data</td></tr>`;
-}
-
-/* ======================================
-   FILTER
-====================================== */
-function applyFilter() {
-  filteredData = rawData.filter(d => {
-    const dt = new Date(d.timestamp);
-    return (!filterDate.value || dt.toISOString().slice(0, 10) === filterDate.value)
-      && (filterMonth.value === '' || dt.getMonth() == filterMonth.value)
-      && (filterYear.value === '' || dt.getFullYear() == filterYear.value);
-  });
-
-  renderTable(filteredData);
-
-  const active = filterDate.value || filterMonth.value !== '' || filterYear.value !== '';
-  exportExcelBtn.classList.toggle('btn-disabled', !active);
-  exportPdfBtn.classList.toggle('btn-disabled', !active);
-}
-
-filterDate.onchange = applyFilter;
-filterMonth.onchange = applyFilter;
-filterYear.onchange = applyFilter;
-
-resetBtn.onclick = () => {
-  filterDate.value = '';
-  filterMonth.value = '';
-  filterYear.value = '';
-  filteredData = [...rawData];
-  renderTable(filteredData);
-  exportExcelBtn.classList.add('btn-disabled');
-  exportPdfBtn.classList.add('btn-disabled');
-};
-
-/* ======================================
-   STATISTICS
-====================================== */
-function updateStatistics() {
-  totalCheckinsEl.textContent = rawData.length;
-  uniqueSuppliersEl.textContent = new Set(rawData.map(d => d.supplier_name)).size;
-  avgDailyEl.textContent = rawData.length ? Math.round(rawData.length / 30) : 0;
-
-  const ranking = {};
-  rawData.forEach(d => {
-    if ((d.status || 'Tepat waktu') === 'Tepat waktu') {
-      ranking[d.supplier_name] = (ranking[d.supplier_name] || 0) + 1;
-    }
-  });
-
-  const sorted = Object.entries(ranking).sort((a, b) => b[1] - a[1]);
-  topSupplierCountEl.textContent = sorted[0]?.[1] || 0;
-
-  supplierRankingEl.innerHTML = sorted.length
-    ? sorted.slice(0, 5).map(([s, c], i) => `
-        <div class="ranking-item ${i === 0 ? 'top' : ''}">
-          <div class="supplier-name">${i + 1}. ${s}</div>
-          <div class="count">${c}</div>
-        </div>
-      `).join('')
-    : '<div class="ranking-item">Belum ada data</div>';
-}
-
-/* ======================================
-   SUPPLIER REFERENCE UI
-====================================== */
-async function loadSupplierReferencesUI() {
-  await fetchSupplierReferences();
-
-  const suppliers = Object.keys(supplierReferences);
-
-  supplierReferenceList.innerHTML = suppliers.map(s => `
-    <div class="supplier-reference-item">
-      <div class="supplier-name">${s}</div>
-      <input type="time" value="${supplierReferences[s] || ''}">
-      <button data-supplier="${s}">Simpan</button>
-    </div>
-  `).join('');
-
-  supplierReferenceList.querySelectorAll('button').forEach(btn => {
-    btn.onclick = async () => {
-      const supplier = btn.dataset.supplier;
-      const time = btn.previousElementSibling.value;
-      if (!time) return alert('Pilih waktu');
-
-      btn.disabled = true;
-      btn.textContent = 'Menyimpan...';
-
-      await fetch('/.netlify/functions/supplier-references', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          supplier_name: supplier,
-          reference_time: time
-        })
-      });
-
-      btn.textContent = 'Tersimpan ✓';
-      btn.disabled = false;
-      supplierReferences[supplier] = time;
+      if (section === 'reference') {
+        loadSupplierReferences();
+      }
     };
   });
-}
 
-/* ======================================
-   INIT
-====================================== */
-loadCheckins();
+  // ================================
+  // RENDER TABLE
+  // ================================
+  function renderTable(data) {
+    tbody.innerHTML = data.length
+      ? data.map(d => `
+        <tr>
+          <td>${new Date(d.timestamp).toLocaleString()}</td>
+          <td>${d.supplier_name}</td>
+          <td>${d.vehicle_no || '-'}</td>
+          <td>
+            <span class="status-badge status-${(d.status || 'Tepat waktu').toLowerCase()}">
+              ${d.status || 'Tepat waktu'}
+            </span>
+          </td>
+          <td>${d.location ? `${d.location.lat},${d.location.lng}` : '-'}</td>
+        </tr>
+      `).join('')
+      : `<tr><td colspan="5">Tidak ada data</td></tr>`;
+  }
+
+  // ================================
+  // FILTER
+  // ================================
+  function applyFilter() {
+    filteredData = rawData.filter(d => {
+      const dt = new Date(d.timestamp);
+      return (!filterDate.value || dt.toISOString().slice(0, 10) === filterDate.value)
+        && (filterMonth.value === '' || dt.getMonth() == filterMonth.value)
+        && (filterYear.value === '' || dt.getFullYear() == filterYear.value);
+    });
+
+    renderTable(filteredData);
+
+    const active = filterDate.value || filterMonth.value !== '' || filterYear.value !== '';
+    exportExcelBtn.classList.toggle('btn-disabled', !active);
+    exportPdfBtn.classList.toggle('btn-disabled', !active);
+  }
+
+  filterDate.onchange = applyFilter;
+  filterMonth.onchange = applyFilter;
+  filterYear.onchange = applyFilter;
+
+  resetBtn.onclick = () => {
+    filterDate.value = '';
+    filterMonth.value = '';
+    filterYear.value = '';
+    filteredData = [...rawData];
+    renderTable(filteredData);
+    exportExcelBtn.classList.add('btn-disabled');
+    exportPdfBtn.classList.add('btn-disabled');
+  };
+
+  // ================================
+  // LOAD CHECKINS (🔥 FIX UTAMA)
+  // ================================
+  async function loadCheckins() {
+    try {
+      const res = await fetch('/.netlify/functions/checkins');
+      const data = await res.json();
+
+      rawData.length = 0;
+      rawData.push(...data);
+
+      // 🔥 FIX: sync filteredData
+      filteredData = [...rawData];
+
+      // 🔥 FIX: populate year AFTER data exists
+      filterYear.innerHTML = '<option value="">Semua Tahun</option>';
+      [...new Set(rawData.map(d => new Date(d.timestamp).getFullYear()))]
+        .sort((a, b) => b - a)
+        .forEach(y => {
+          const o = document.createElement('option');
+          o.value = y;
+          o.textContent = y;
+          filterYear.appendChild(o);
+        });
+
+      updateStatistics();
+      renderTable(rawData);
+
+    } catch (err) {
+      console.error(err);
+    }
+  }
+
+  // ================================
+  // STATISTICS
+  // ================================
+  function updateStatistics() {
+    totalCheckinsEl.textContent = rawData.length;
+    uniqueSuppliersEl.textContent = new Set(rawData.map(d => d.supplier_name)).size;
+    avgDailyEl.textContent = rawData.length ? Math.round(rawData.length / 30) : 0;
+
+    const ranking = {};
+    rawData.forEach(d => {
+      if ((d.status || 'Tepat waktu') === 'Tepat waktu') {
+        ranking[d.supplier_name] = (ranking[d.supplier_name] || 0) + 1;
+      }
+    });
+
+    const sorted = Object.entries(ranking).sort((a, b) => b[1] - a[1]);
+    topSupplierCountEl.textContent = sorted[0]?.[1] || 0;
+
+    supplierRankingEl.innerHTML = sorted.length
+      ? sorted.slice(0, 5).map(([s, c], i) => `
+          <div class="ranking-item ${i === 0 ? 'top' : ''}">
+            <div class="supplier-name">${i + 1}. ${s}</div>
+            <div class="count">${c}</div>
+          </div>
+        `).join('')
+      : '<div class="ranking-item">Belum ada data</div>';
+  }
+
+  // ================================
+  // INIT
+  // ================================
+  loadCheckins();
 </script>
-<script src="/js/arrival-filter.js"></script>
+<script src="/js/arrival-filter.js"></scrip>
 </body>
 </html>
