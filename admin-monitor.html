@@ -775,94 +775,88 @@
   }
 
   // Supplier Reference Management
-  async function loadSupplierReferences() {
-    try {
-      const response = await fetch('/.netlify/functions/supplier-references');
-      if (response.ok) {
-        supplierReferences = await response.json();
-      } else {
-        console.warn('Failed to load supplier references from API, trying localStorage');
-        supplierReferences = JSON.parse(localStorage.getItem('supplierReferences') || '{}');
-      }
-    } catch (error) {
-      console.warn('Error loading supplier references from API, using localStorage:', error);
-      supplierReferences = JSON.parse(localStorage.getItem('supplierReferences') || '{}');
-    }
+const API_URL = '/.netlify/functions/supplier-references'
 
-    // Use all suppliers from the hardcoded list, not just those with check-ins
-    const allSuppliers = [
-      'PT. TENMA INDONESIA',
-      'PT. INOAC POLYTHECNO INDONESIA',
-      'PT. SIGMA INTI PRESISI',
-      'PT. ATEJA KAWASHIMA',
-      'PT. YKK ZIPPER INDONESIA',
-      'PT. SEIREN INDONESIA',
-      'PT. SINAR SUMINOE',
-      'PT. NISSHO INDUSTRI INDONESIA',
-      'PT. ENDOTA SINAR INDONESIA',
-      'PT. PRIMARAYA GRAHA NUSANTARA',
-      'PT. TOYO QUALITY ONE',
-      'PT. ARMSTRONG INDONESIA',
-      'PT. MEIWA',
-      'PT. RAJAWALI MITRA PRATAMA',
-      'PT. MEIHOKU',
-      'PT. SERVVO INDONESIA',
-      'PT. INDAH VARIA EKA SELARAS',
-      'PT. BONECOM TRICOM (TEGAL)'
-    ];
+async function loadSupplierReferences() {
+  const res = await fetch(API_URL)
+  supplierReferences = await res.json()
 
-    supplierReferenceList.innerHTML = allSuppliers.map(supplier => `
-      <div class="supplier-reference-item">
-        <div class="supplier-name">${supplier}</div>
-        <input type="time" id="ref-${supplier.replace(/\s+/g, '-').toLowerCase()}"
-               value="${supplierReferences[supplier] || ''}">
-        <button onclick="saveSupplierReference('${supplier}')">Simpan</button>
-      </div>
-    `).join('');
+  const suppliers = [
+    'PT. TENMA INDONESIA',
+    'PT. INOAC POLYTHECNO INDONESIA',
+    'PT. SIGMA INTI PRESISI',
+    'PT. ATEJA KAWASHIMA',
+    'PT. YKK ZIPPER INDONESIA',
+    'PT. SEIREN INDONESIA',
+    'PT. SINAR SUMINOE',
+    'PT. NISSHO INDUSTRI INDONESIA',
+    'PT. ENDOTA SINAR INDONESIA',
+    'PT. PRIMARAYA GRAHA NUSANTARA',
+    'PT. TOYO QUALITY ONE',
+    'PT. ARMSTRONG INDONESIA',
+    'PT. MEIWA',
+    'PT. RAJAWALI MITRA PRATAMA',
+    'PT. MEIHOKU',
+    'PT. SERVVO INDONESIA',
+    'PT. INDAH VARIA EKA SELARAS',
+    'PT. BONECOM TRICOM (TEGAL)'
+  ]
+
+  supplierReferenceList.innerHTML = suppliers.map(s => `
+    <div class="supplier-reference-item">
+      <div class="supplier-name">${s}</div>
+      <input type="time" value="${supplierReferences[s] || ''}" />
+      <button type="button" data-supplier="${s}">Simpan</button>
+    </div>
+  `).join('')
+
+  // 🔥 EVENT LISTENER (BUKAN onclick)
+  supplierReferenceList.querySelectorAll('button').forEach(btn => {
+    btn.addEventListener('click', saveSupplierReference)
+  })
+}
+
+async function saveSupplierReference(e) {
+  e.preventDefault() // 🔥 STOP RESTART TOTAL
+
+  const btn = e.target
+  const wrapper = btn.closest('.supplier-reference-item')
+  const supplier = btn.dataset.supplier
+  const time = wrapper.querySelector('input').value
+
+  if (!time) {
+    alert('Pilih waktu terlebih dahulu')
+    return
   }
 
-  async function saveSupplierReference(supplierName) {
-    const inputId = `ref-${supplierName.replace(/\s+/g, '-').toLowerCase()}`;
-    const timeValue = document.getElementById(inputId).value;
+  btn.disabled = true
+  btn.textContent = 'Menyimpan...'
 
-    if (timeValue) {
-      try {
-        const response = await fetch('/.netlify/functions/supplier-references', {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json'
-          },
-          body: JSON.stringify({
-            supplier_name: supplierName,
-            reference_time: timeValue
-          })
-        });
+  try {
+    const res = await fetch(API_URL, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        supplier_name: supplier,
+        reference_time: time
+      })
+    })
 
-        if (response.ok) {
-          supplierReferences[supplierName] = timeValue;
-          alert(`Waktu referensi untuk ${supplierName} berhasil disimpan!`);
-        } else {
-          // For local development, store in localStorage as fallback
-          console.warn('API not available, storing locally');
-          const localRefs = JSON.parse(localStorage.getItem('supplierReferences') || '{}');
-          localRefs[supplierName] = timeValue;
-          localStorage.setItem('supplierReferences', JSON.stringify(localRefs));
-          supplierReferences[supplierName] = timeValue;
-          alert(`Waktu referensi untuk ${supplierName} disimpan secara lokal (untuk development)!`);
-        }
-      } catch (error) {
-        console.error('Error saving supplier reference:', error);
-        // Fallback to localStorage for development
-        const localRefs = JSON.parse(localStorage.getItem('supplierReferences') || '{}');
-        localRefs[supplierName] = timeValue;
-        localStorage.setItem('supplierReferences', JSON.stringify(localRefs));
-        supplierReferences[supplierName] = timeValue;
-        alert(`Waktu referensi untuk ${supplierName} disimpan secara lokal (mode offline)!`);
-      }
-    } else {
-      alert('Silakan pilih waktu referensi terlebih dahulu.');
-    }
+    if (!res.ok) throw new Error('Gagal')
+
+    supplierReferences[supplier] = time
+    btn.textContent = 'Tersimpan ✓'
+
+  } catch (err) {
+    alert('Gagal menyimpan')
+    btn.textContent = 'Gagal'
   }
+
+  setTimeout(() => {
+    btn.disabled = false
+    btn.textContent = 'Simpan'
+  }, 1200)
+}
 
   // Make saveSupplierReference global
   window.saveSupplierReference = saveSupplierReference;

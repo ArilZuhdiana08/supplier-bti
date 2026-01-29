@@ -17,44 +17,49 @@ exports.handler = async (event) => {
   }
 
   try {
-    // GET
+    // ===== GET =====
     if (event.httpMethod === 'GET') {
       const { data, error } = await supabase
         .from('supplier_references')
-        .select('*')
-        .order('supplier_name')
+        .select('supplier_name, reference_time')
 
       if (error) throw error
+
+      // 🔥 UBAH ARRAY → OBJECT
+      const result = {}
+      data.forEach(row => {
+        result[row.supplier_name] = row.reference_time
+      })
 
       return {
         statusCode: 200,
         headers,
-        body: JSON.stringify(data)
+        body: JSON.stringify(result)
       }
     }
 
-    // POST
+    // ===== POST =====
     if (event.httpMethod === 'POST') {
       const { supplier_name, reference_time } = JSON.parse(event.body)
 
       const { error } = await supabase
         .from('supplier_references')
-        .upsert({
-          supplier_name,
-          reference_time,
-          updated_at: new Date()
-        })
+        .upsert(
+          { supplier_name, reference_time },
+          { onConflict: 'supplier_name' } // 🔥 WAJIB
+        )
 
       if (error) throw error
 
       return {
         statusCode: 200,
         headers,
-        body: JSON.stringify({ supplier_name, reference_time })
+        body: JSON.stringify({ success: true })
       }
     }
 
     return { statusCode: 405, headers }
+
   } catch (err) {
     return {
       statusCode: 500,
