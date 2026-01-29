@@ -1,23 +1,11 @@
-const fs = require('fs').promises
-const path = require('path')
+const { createClient } = require('@supabase/supabase-js')
 
-const DATA_FILE = '/tmp/checkins.json'
+const supabase = createClient(
+  process.env.SUPABASE_URL,
+  process.env.SUPABASE_SERVICE_ROLE_KEY
+)
 
-async function readCheckins() {
-  try {
-    const data = await fs.readFile(DATA_FILE, 'utf-8')
-    return JSON.parse(data)
-  } catch (err) {
-    return []
-  }
-}
-
-async function writeCheckins(data) {
-  await fs.writeFile(DATA_FILE, JSON.stringify(data, null, 2))
-}
-
-exports.handler = async (event, context) => {
-  // Enable CORS
+exports.handler = async (event) => {
   const headers = {
     'Access-Control-Allow-Origin': '*',
     'Access-Control-Allow-Headers': 'Content-Type',
@@ -25,45 +13,54 @@ exports.handler = async (event, context) => {
   }
 
   if (event.httpMethod === 'OPTIONS') {
-    return { statusCode: 200, headers, body: '' }
+    return { statusCode: 200, headers }
   }
 
   try {
     if (event.httpMethod === 'GET') {
-      // Get all check-ins
-      const checkins = await readCheckins()
+      const { data, error } = await supabase
+        .from('checkins')
+        .select('*')
+        .order('timestamp', { ascending: false })
+
+      if (error) throw error
 
       return {
         statusCode: 200,
         headers,
-        body: JSON.stringify(checkins.sort((a, b) => new Date(b.timestamp) - new Date(a.timestamp)))
+        body: JSON.stringify(data)
       }
     }
 
     if (event.httpMethod === 'POST') {
-      // Add new check-in
-      const checkinData = JSON.parse(event.body)
-      checkinData.id = Date.now().toString()
+      const body = JSON.parse(event.body)
 
-      const checkins = await readCheckins()
-      checkins.push(checkinData)
-      await writeCheckins(checkins)
+      const { data, error } = await supabase
+        .from('checkins')
+        .insert([{
+          supplier_name: body.supplier_name,
+          location: body.location,
+          notes: body.notes,
+          timestamp: new Date()
+        }])
+        .select()
+
+      if (error) throw error
 
       return {
         statusCode: 201,
         headers,
-        body: JSON.stringify(checkinData)
+        body: JSON.stringify(data[0])
       }
     }
 
     return {
       statusCode: 405,
       headers,
-      body: JSON.stringify({ error: 'Method not allowed' })
+      body: 'Method Not Allowed'
     }
 
   } catch (error) {
-    console.error('Error:', error)
     return {
       statusCode: 500,
       headers,

@@ -2,5 +2,7 @@
   "name": "supplier-bti",
   "version": "1.0.0",
   "description": "Supplier check-in monitoring system",
-  "dependencies": {}
+  "dependencies": {
+    "@supabase/supabase-js": "^2.93.3"
+  }
 }
