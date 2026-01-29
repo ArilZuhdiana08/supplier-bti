@@ -775,11 +775,15 @@
   }
 
   // Supplier Reference Management
-const API_URL = '/.netlify/functions/supplier-references'
-
 async function loadSupplierReferences() {
   const res = await fetch(API_URL)
-  supplierReferences = await res.json()
+  const rows = await res.json()
+
+  // 🔥 UBAH ARRAY → OBJECT
+  supplierReferences = {}
+  rows.forEach(r => {
+    supplierReferences[r.supplier_name] = r.reference_time
+  })
 
   const suppliers = [
     'PT. TENMA INDONESIA',
@@ -805,15 +809,13 @@ async function loadSupplierReferences() {
   supplierReferenceList.innerHTML = suppliers.map(s => `
     <div class="supplier-reference-item">
       <div class="supplier-name">${s}</div>
-      <input type="time" value="${supplierReferences[s] || ''}" />
+      <input type="time" value="${supplierReferences[s] || ''}">
       <button type="button" data-supplier="${s}">Simpan</button>
     </div>
   `).join('')
 
-  // 🔥 EVENT LISTENER (BUKAN onclick)
-  supplierReferenceList.querySelectorAll('button').forEach(btn => {
-    btn.addEventListener('click', saveSupplierReference)
-  })
+  supplierReferenceList.querySelectorAll('button')
+    .forEach(btn => btn.addEventListener('click', saveSupplierReference))
 }
 
 async function saveSupplierReference(e) {
@@ -908,25 +910,35 @@ async function saveSupplierReference(e) {
   };
 
   // Load data from API
-  async function loadCheckins() {
-    try {
-      const response = await fetch('/.netlify/functions/checkins');
-      if (response.ok) {
-        rawData.length = 0; // Clear array
-        rawData.push(...await response.json());
-        updateStatistics();
-        renderTable(rawData);
-      } else {
-        console.error('Failed to load check-ins');
-      }
-    } catch (error) {
-      console.error('Error loading check-ins:', error);
-    }
+async function loadCheckins() {
+  try {
+    const response = await fetch('/.netlify/functions/checkins')
+    if (!response.ok) throw new Error('Gagal load')
+
+    rawData.length = 0
+    rawData.push(...await response.json())
+
+    // 🔥 ISI FILTER YEAR SETELAH DATA ADA
+    filterYear.innerHTML = '<option value="">Semua Tahun</option>'
+    [...new Set(rawData.map(d => new Date(d.timestamp).getFullYear()))]
+      .sort((a, b) => b - a)
+      .forEach(y => {
+        const o = document.createElement('option')
+        o.value = y
+        o.textContent = y
+        filterYear.appendChild(o)
+      })
+
+    updateStatistics()
+    renderTable(rawData)
+
+  } catch (err) {
+    console.error(err)
   }
+}
 
   // Initialize
   loadCheckins();
 </script>
-<script src="/js/arrival-filter.js"></script>
 </body>
 </html>
