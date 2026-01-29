@@ -2,36 +2,36 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Test Supplier Reference</title>
+    <title>Test Supplier Reference (LocalStorage Only)</title>
 </head>
 <body>
-    <h1>Supplier Reference Test</h1>
+    <h1>Test LocalStorage Supplier Reference</h1>
     <div id="test-output"></div>
 
     <script>
-        // Simulate the supplier reference functionality
-        let supplierReferences = JSON.parse(localStorage.getItem('supplierReferences') || '{}');
+        const STORAGE_KEY = 'supplier_references_test';
 
-        function testSupplierReference() {
+        function runTest() {
             const output = document.getElementById('test-output');
 
-            // Test saving a reference
-            supplierReferences['Test Supplier'] = '08:00';
-            localStorage.setItem('supplierReferences', JSON.stringify(supplierReferences));
+            // Simpan data dummy
+            const data = {
+                "Test Supplier": "08:00"
+            };
+            localStorage.setItem(STORAGE_KEY, JSON.stringify(data));
 
-            // Test loading references
-            const loaded = JSON.parse(localStorage.getItem('supplierReferences') || '{}');
+            // Ambil ulang
+            const loaded = JSON.parse(localStorage.getItem(STORAGE_KEY));
 
             output.innerHTML = `
-                <p>✓ Supplier reference saved: ${loaded['Test Supplier']}</p>
-                <p>✓ All references: ${JSON.stringify(loaded)}</p>
-                <p>✓ Functionality working correctly!</p>
+                <p>✅ Save OK</p>
+                <p>Supplier: <b>Test Supplier</b></p>
+                <p>Time: <b>${loaded["Test Supplier"]}</b></p>
+                <pre>${JSON.stringify(loaded, null, 2)}</pre>
             `;
         }
 
-        // Run test
-        testSupplierReference();
+        runTest();
     </script>
 </body>
 </html>
