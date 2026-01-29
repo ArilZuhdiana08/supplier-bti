@@ -593,8 +593,15 @@
 </main>
 
 <script>
-  // DOM Elements
+  // ================================
+  // GLOBAL STATE
+  // ================================
   const rawData = [];
+  let filteredData = [];
+
+  // ================================
+  // DOM ELEMENTS
+  // ================================
   const tbody = document.getElementById('tbody');
   const filterDate = document.getElementById('filter-date');
   const filterMonth = document.getElementById('filter-month');
@@ -603,14 +610,12 @@
   const exportExcelBtn = document.getElementById('export-excel');
   const exportPdfBtn = document.getElementById('export-pdf');
 
-  // Statistics elements
   const totalCheckinsEl = document.getElementById('total-checkins');
   const uniqueSuppliersEl = document.getElementById('unique-suppliers');
   const avgDailyEl = document.getElementById('avg-daily');
   const topSupplierCountEl = document.getElementById('top-supplier-count');
   const supplierRankingEl = document.getElementById('supplier-ranking');
 
-  // Menu elements
   const hamburger = document.getElementById('hamburger');
   const hamburgerMenu = document.getElementById('hamburger-menu');
   const menuOverlay = document.getElementById('menu-overlay');
@@ -618,327 +623,169 @@
   const sections = document.querySelectorAll('.section');
   const supplierReferenceList = document.getElementById('supplier-reference-list');
 
-  let filteredData = [];
   let currentSection = 'statistics';
-
-  // Supplier reference times (loaded from API)
   let supplierReferences = {};
 
-  // Hamburger Menu Toggle
-  function toggleMenu() {
+  // ================================
+  // MENU
+  // ================================
+  hamburger.onclick = () => {
     hamburgerMenu.classList.toggle('open');
     menuOverlay.classList.toggle('open');
-  }
+  };
 
-  function closeMenu() {
+  menuOverlay.onclick = () => {
     hamburgerMenu.classList.remove('open');
     menuOverlay.classList.remove('open');
-  }
+  };
 
-  hamburger.addEventListener('click', toggleMenu);
-  menuOverlay.addEventListener('click', closeMenu);
-
-  // Menu Navigation
   menuItems.forEach(item => {
-    item.addEventListener('click', () => {
+    item.onclick = () => {
       if (item.id === 'logout') {
-        // Handle logout
         sessionStorage.removeItem('adminLoggedIn');
-        window.location.href = 'index.html';
+        location.href = 'index.html';
         return;
       }
 
       const section = item.dataset.section;
-      switchSection(section);
-      closeMenu();
+      sections.forEach(s => s.classList.remove('active'));
+      document.getElementById(section + '-section').classList.add('active');
 
-      // Update active menu item
-      menuItems.forEach(mi => mi.classList.remove('active'));
+      menuItems.forEach(m => m.classList.remove('active'));
       item.classList.add('active');
-    });
+
+      hamburgerMenu.classList.remove('open');
+      menuOverlay.classList.remove('open');
+
+      if (section === 'filter') {
+        renderTable(filteredData);
+      }
+
+      if (section === 'reference') {
+        loadSupplierReferences();
+      }
+    };
   });
 
-  function switchSection(sectionName) {
-    currentSection = sectionName;
-    sections.forEach(section => {
-      section.classList.remove('active');
-    });
-    document.getElementById(sectionName + '-section').classList.add('active');
-
-    // Load section specific data
-    if (sectionName === 'reference') {
-      loadSupplierReferences();
-    } else if (sectionName === 'filter') {
-      renderTable(filteredData.length ? filteredData : rawData);
-    }
-  }
-
-  // Populate year filter
-  [...new Set(rawData.map(d=>new Date(d.timestamp).getFullYear()))]
-    .sort((a,b)=>b-a)
-    .forEach(y=>{
-      const o=document.createElement('option');
-      o.value=y;o.textContent=y;
-      filterYear.appendChild(o);
-    });
-
-  // Calculate monthly statistics
-  function calculateMonthlyStats(monthOffset = 0) {
-    const now = new Date();
-    const targetMonth = new Date(now.getFullYear(), now.getMonth() - monthOffset, 1);
-    const nextMonth = new Date(targetMonth.getFullYear(), targetMonth.getMonth() + 1, 1);
-
-    const monthlyData = rawData.filter(d => {
-      const date = new Date(d.timestamp);
-      return date >= targetMonth && date < nextMonth;
-    });
-
-    // Total check-ins
-    const totalCheckins = monthlyData.length;
-
-    // Unique suppliers
-    const uniqueSuppliers = new Set(monthlyData.map(d => d.supplier_name)).size;
-
-    // Average daily check-ins
-    const daysInMonth = new Date(targetMonth.getFullYear(), targetMonth.getMonth() + 1, 0).getDate();
-    const avgDaily = Math.round((totalCheckins / daysInMonth) * 10) / 10;
-
-    // Supplier "Tepat waktu" frequency ranking
-    const onTimeSupplierCount = {};
-    monthlyData.forEach(d => {
-      if ((d.status || 'Tepat waktu') === 'Tepat waktu') {
-        onTimeSupplierCount[d.supplier_name] = (onTimeSupplierCount[d.supplier_name] || 0) + 1;
-      }
-    });
-
-    const supplierRanking = Object.entries(onTimeSupplierCount)
-      .sort(([,a], [,b]) => b - a)
-      .slice(0, 5); // Top 5 suppliers with "Tepat waktu" status
-
-    const topSupplierCount = supplierRanking.length > 0 ? supplierRanking[0][1] : 0;
-
-    return {
-      totalCheckins,
-      uniqueSuppliers,
-      avgDaily,
-      topSupplierCount,
-      supplierRanking
-    };
-  }
-
-  // Update statistics display
-  function updateStatistics() {
-    const stats = calculateMonthlyStats();
-
-    totalCheckinsEl.textContent = stats.totalCheckins;
-    uniqueSuppliersEl.textContent = stats.uniqueSuppliers;
-    avgDailyEl.textContent = stats.avgDaily;
-    topSupplierCountEl.textContent = stats.topSupplierCount;
-
-    // Update supplier ranking
-    supplierRankingEl.innerHTML = stats.supplierRanking.length > 0
-      ? stats.supplierRanking.map(([supplier, count], index) => `
-          <div class="ranking-item ${index === 0 ? 'top' : ''}">
-            <div class="supplier-name">${index + 1}. ${supplier}</div>
-            <div class="count">${count} check-in${count > 1 ? 's' : ''}</div>
-          </div>
-        `).join('')
-      : '<div class="ranking-item"><div class="supplier-name">Belum ada data supplier bulan ini</div></div>';
-  }
-
-  function renderTable(data){
+  // ================================
+  // RENDER TABLE
+  // ================================
+  function renderTable(data) {
     tbody.innerHTML = data.length
-      ? data.map(d=>`
+      ? data.map(d => `
         <tr>
           <td>${new Date(d.timestamp).toLocaleString()}</td>
           <td>${d.supplier_name}</td>
-          <td>${d.vehicle_no||'-'}</td>
-          <td><span class="status-badge status-${(d.status||'Tepat waktu').toLowerCase().replace(' ', ' ')}">${d.status||'Tepat waktu'}</span></td>
-          <td>${d.location?d.location.lat.toFixed(4)+','+d.location.lng.toFixed(4):'-'}</td>
-        </tr>`).join('')
-      : '<tr><td colspan="5">Tidak ada data</td></tr>';
+          <td>${d.vehicle_no || '-'}</td>
+          <td>
+            <span class="status-badge status-${(d.status || 'Tepat waktu').toLowerCase()}">
+              ${d.status || 'Tepat waktu'}
+            </span>
+          </td>
+          <td>${d.location ? `${d.location.lat},${d.location.lng}` : '-'}</td>
+        </tr>
+      `).join('')
+      : `<tr><td colspan="5">Tidak ada data</td></tr>`;
   }
 
-  function applyFilter(){
-    filteredData = rawData.filter(d=>{
+  // ================================
+  // FILTER
+  // ================================
+  function applyFilter() {
+    filteredData = rawData.filter(d => {
       const dt = new Date(d.timestamp);
-      return (!filterDate.value || dt.toISOString().slice(0,10)===filterDate.value)
-        && (filterMonth.value==='' || dt.getMonth()==filterMonth.value)
-        && (filterYear.value==='' || dt.getFullYear()==filterYear.value);
+      return (!filterDate.value || dt.toISOString().slice(0, 10) === filterDate.value)
+        && (filterMonth.value === '' || dt.getMonth() == filterMonth.value)
+        && (filterYear.value === '' || dt.getFullYear() == filterYear.value);
     });
 
     renderTable(filteredData);
 
-    const active = filterDate.value || filterMonth.value!=='' || filterYear.value!=='';
+    const active = filterDate.value || filterMonth.value !== '' || filterYear.value !== '';
     exportExcelBtn.classList.toggle('btn-disabled', !active);
     exportPdfBtn.classList.toggle('btn-disabled', !active);
   }
 
-  // Supplier Reference Management
-async function loadSupplierReferences() {
-  const res = await fetch(API_URL)
-  const rows = await res.json()
-
-  // 🔥 UBAH ARRAY → OBJECT
-  supplierReferences = {}
-  rows.forEach(r => {
-    supplierReferences[r.supplier_name] = r.reference_time
-  })
-
-  const suppliers = [
-    'PT. TENMA INDONESIA',
-    'PT. INOAC POLYTHECNO INDONESIA',
-    'PT. SIGMA INTI PRESISI',
-    'PT. ATEJA KAWASHIMA',
-    'PT. YKK ZIPPER INDONESIA',
-    'PT. SEIREN INDONESIA',
-    'PT. SINAR SUMINOE',
-    'PT. NISSHO INDUSTRI INDONESIA',
-    'PT. ENDOTA SINAR INDONESIA',
-    'PT. PRIMARAYA GRAHA NUSANTARA',
-    'PT. TOYO QUALITY ONE',
-    'PT. ARMSTRONG INDONESIA',
-    'PT. MEIWA',
-    'PT. RAJAWALI MITRA PRATAMA',
-    'PT. MEIHOKU',
-    'PT. SERVVO INDONESIA',
-    'PT. INDAH VARIA EKA SELARAS',
-    'PT. BONECOM TRICOM (TEGAL)'
-  ]
-
-  supplierReferenceList.innerHTML = suppliers.map(s => `
-    <div class="supplier-reference-item">
-      <div class="supplier-name">${s}</div>
-      <input type="time" value="${supplierReferences[s] || ''}">
-      <button type="button" data-supplier="${s}">Simpan</button>
-    </div>
-  `).join('')
-
-  supplierReferenceList.querySelectorAll('button')
-    .forEach(btn => btn.addEventListener('click', saveSupplierReference))
-}
-
-async function saveSupplierReference(e) {
-  e.preventDefault() // 🔥 STOP RESTART TOTAL
-
-  const btn = e.target
-  const wrapper = btn.closest('.supplier-reference-item')
-  const supplier = btn.dataset.supplier
-  const time = wrapper.querySelector('input').value
-
-  if (!time) {
-    alert('Pilih waktu terlebih dahulu')
-    return
-  }
-
-  btn.disabled = true
-  btn.textContent = 'Menyimpan...'
-
-  try {
-    const res = await fetch(API_URL, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        supplier_name: supplier,
-        reference_time: time
-      })
-    })
-
-    if (!res.ok) throw new Error('Gagal')
-
-    supplierReferences[supplier] = time
-    btn.textContent = 'Tersimpan ✓'
-
-  } catch (err) {
-    alert('Gagal menyimpan')
-    btn.textContent = 'Gagal'
-  }
-
-  setTimeout(() => {
-    btn.disabled = false
-    btn.textContent = 'Simpan'
-  }, 1200)
-}
-
-  // Make saveSupplierReference global
-  window.saveSupplierReference = saveSupplierReference;
-
-  // Event Listeners
   filterDate.onchange = applyFilter;
   filterMonth.onchange = applyFilter;
   filterYear.onchange = applyFilter;
 
-  resetBtn.onclick = ()=>{
-    filterDate.value='';filterMonth.value='';filterYear.value='';
-    filteredData=[];
-    renderTable(rawData);
+  resetBtn.onclick = () => {
+    filterDate.value = '';
+    filterMonth.value = '';
+    filterYear.value = '';
+    filteredData = [...rawData];
+    renderTable(filteredData);
     exportExcelBtn.classList.add('btn-disabled');
     exportPdfBtn.classList.add('btn-disabled');
   };
 
-  exportExcelBtn.onclick = ()=>{
-    if(!filteredData.length) return alert('Filter data terlebih dahulu');
-    const ws = XLSX.utils.json_to_sheet(filteredData.map(d=>({
-      Waktu:new Date(d.timestamp).toLocaleString(),
-      Supplier:d.supplier_name,
-      Kendaraan:d.vehicle_no||'-',
-      Status:d.status||'Tepat waktu',
-      Lokasi:d.location?`${d.location.lat},${d.location.lng}`:'-'
-    })));
-    const wb = XLSX.utils.book_new();
-    XLSX.utils.book_append_sheet(wb, ws, 'Kedatangan');
-    XLSX.writeFile(wb, 'kedatangan_supplier.xlsx');
-  };
+  // ================================
+  // LOAD CHECKINS (🔥 FIX UTAMA)
+  // ================================
+  async function loadCheckins() {
+    try {
+      const res = await fetch('/.netlify/functions/checkins');
+      const data = await res.json();
 
-  exportPdfBtn.onclick = ()=>{
-    if(!filteredData.length) return alert('Filter data terlebih dahulu');
-    const { jsPDF } = window.jspdf;
-    const doc = new jsPDF();
-    doc.text('Monitoring Kedatangan Supplier',14,14);
-    doc.autoTable({
-      startY:20,
-      head:[['Waktu','Supplier','Kendaraan','Status','Lokasi']],
-      body:filteredData.map(d=>[
-        new Date(d.timestamp).toLocaleString(),
-        d.supplier_name,
-        d.vehicle_no||'-',
-        d.status||'Tepat waktu',
-        d.location?`${d.location.lat},${d.location.lng}`:'-'
-      ])
-    });
-    doc.save('kedatangan_supplier.pdf');
-  };
+      rawData.length = 0;
+      rawData.push(...data);
 
-  // Load data from API
-async function loadCheckins() {
-  try {
-    const response = await fetch('/.netlify/functions/checkins')
-    if (!response.ok) throw new Error('Gagal load')
+      // 🔥 FIX: sync filteredData
+      filteredData = [...rawData];
 
-    rawData.length = 0
-    rawData.push(...await response.json())
+      // 🔥 FIX: populate year AFTER data exists
+      filterYear.innerHTML = '<option value="">Semua Tahun</option>';
+      [...new Set(rawData.map(d => new Date(d.timestamp).getFullYear()))]
+        .sort((a, b) => b - a)
+        .forEach(y => {
+          const o = document.createElement('option');
+          o.value = y;
+          o.textContent = y;
+          filterYear.appendChild(o);
+        });
 
-    // 🔥 ISI FILTER YEAR SETELAH DATA ADA
-    filterYear.innerHTML = '<option value="">Semua Tahun</option>'
-    [...new Set(rawData.map(d => new Date(d.timestamp).getFullYear()))]
-      .sort((a, b) => b - a)
-      .forEach(y => {
-        const o = document.createElement('option')
-        o.value = y
-        o.textContent = y
-        filterYear.appendChild(o)
-      })
+      updateStatistics();
+      renderTable(rawData);
 
-    updateStatistics()
-    renderTable(rawData)
-
-  } catch (err) {
-    console.error(err)
+    } catch (err) {
+      console.error(err);
+    }
   }
-}
 
-  // Initialize
+  // ================================
+  // STATISTICS
+  // ================================
+  function updateStatistics() {
+    totalCheckinsEl.textContent = rawData.length;
+    uniqueSuppliersEl.textContent = new Set(rawData.map(d => d.supplier_name)).size;
+    avgDailyEl.textContent = rawData.length ? Math.round(rawData.length / 30) : 0;
+
+    const ranking = {};
+    rawData.forEach(d => {
+      if ((d.status || 'Tepat waktu') === 'Tepat waktu') {
+        ranking[d.supplier_name] = (ranking[d.supplier_name] || 0) + 1;
+      }
+    });
+
+    const sorted = Object.entries(ranking).sort((a, b) => b[1] - a[1]);
+    topSupplierCountEl.textContent = sorted[0]?.[1] || 0;
+
+    supplierRankingEl.innerHTML = sorted.length
+      ? sorted.slice(0, 5).map(([s, c], i) => `
+          <div class="ranking-item ${i === 0 ? 'top' : ''}">
+            <div class="supplier-name">${i + 1}. ${s}</div>
+            <div class="count">${c}</div>
+          </div>
+        `).join('')
+      : '<div class="ranking-item">Belum ada data</div>';
+  }
+
+  // ================================
+  // INIT
+  // ================================
   loadCheckins();
 </script>
+<script src="/js/arrival-filter.js"></script>
 </body>
 </html>
