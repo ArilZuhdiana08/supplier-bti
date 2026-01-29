@@ -1,8 +1,20 @@
-const { createClient } = require('@supabase/supabase-js')
+const fs = require('fs').promises
+const path = require('path')
 
-const supabaseUrl = process.env.SUPABASE_URL
-const supabaseKey = process.env.SUPABASE_ANON_KEY
-const supabase = createClient(supabaseUrl, supabaseKey)
+const DATA_FILE = '/tmp/checkins.json'
+
+async function readCheckins() {
+  try {
+    const data = await fs.readFile(DATA_FILE, 'utf-8')
+    return JSON.parse(data)
+  } catch (err) {
+    return []
+  }
+}
+
+async function writeCheckins(data) {
+  await fs.writeFile(DATA_FILE, JSON.stringify(data, null, 2))
+}
 
 exports.handler = async (event, context) => {
   // Enable CORS
@@ -19,35 +31,28 @@ exports.handler = async (event, context) => {
   try {
     if (event.httpMethod === 'GET') {
       // Get all check-ins
-      const { data, error } = await supabase
-        .from('checkins')
-        .select('*')
-        .order('timestamp', { ascending: false })
-
-      if (error) throw error
+      const checkins = await readCheckins()
 
       return {
         statusCode: 200,
         headers,
-        body: JSON.stringify(data)
+        body: JSON.stringify(checkins.sort((a, b) => new Date(b.timestamp) - new Date(a.timestamp)))
       }
     }
 
     if (event.httpMethod === 'POST') {
       // Add new check-in
       const checkinData = JSON.parse(event.body)
+      checkinData.id = Date.now().toString()
 
-      const { data, error } = await supabase
-        .from('checkins')
-        .insert([checkinData])
-        .select()
-
-      if (error) throw error
+      const checkins = await readCheckins()
+      checkins.push(checkinData)
+      await writeCheckins(checkins)
 
       return {
         statusCode: 201,
         headers,
-        body: JSON.stringify(data[0])
+        body: JSON.stringify(checkinData)
       }
     }
 
