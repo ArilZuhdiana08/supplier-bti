@@ -816,7 +816,7 @@
         <div class="supplier-name">${supplier}</div>
         <input type="time" id="ref-${supplier.replace(/\s+/g, '-').toLowerCase()}"
                value="${supplierReferences[supplier] || ''}">
-        <button type="button" onclick="saveSupplierReference('${supplier}')">Simpan</button>
+        <button onclick="saveSupplierReference('${supplier}')">Simpan</button>
       </div>
     `).join('');
   }
