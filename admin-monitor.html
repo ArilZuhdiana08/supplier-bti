@@ -824,23 +824,45 @@
     }).join('');
   }
 
-  function saveSupplierReference(supplierName) {
+async function saveSupplierReference(supplierName) {
     const inputId = `ref-${supplierName.replace(/\s+/g, '-').toLowerCase()}`;
     const timeValue = document.getElementById(inputId).value;
 
     if (!timeValue) {
-      alert('Silakan pilih waktu terlebih dahulu');
-      return;
+        alert('Silakan pilih waktu terlebih dahulu');
+        return;
     }
 
-    supplierReferences[supplierName] = timeValue;
-    localStorage.setItem(
-      'supplierReferences',
-      JSON.stringify(supplierReferences)
-    );
+    // Tampilkan loading sederhana
+    const btn = event.target;
+    const originalText = btn.innerText;
+    btn.innerText = 'Menyimpan...';
+    btn.disabled = true;
 
-    alert(`Waktu referensi ${supplierName} disimpan (${timeValue})`);
-  }
+    try {
+        const response = await fetch('/.netlify/functions/save-supplier-reference', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                supplier_name: supplierName,
+                reference_time: timeValue
+            })
+        });
+
+        const result = await response.json();
+
+        if (response.ok) {
+            alert(`Sukses! Jadwal ${supplierName} berhasil disimpan ke database.`);
+        } else {
+            throw new Error(result.error || 'Gagal menyimpan');
+        }
+    } catch (err) {
+        alert('Error: ' + err.message);
+    } finally {
+        btn.innerText = originalText;
+        btn.disabled = false;
+    }
+}
 
   // expose
   window.saveSupplierReference = saveSupplierReference;
