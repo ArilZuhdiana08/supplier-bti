@@ -66,8 +66,8 @@ exports.handler = async (event) => {
         .from('checkins')
         .insert([{
           supplier_name: body.supplier_name,
+          vehicle_no: body.vehicle_no,
           location: body.location,
-          notes: body.notes,
           status: status,
           timestamp: new Date()
         }])
