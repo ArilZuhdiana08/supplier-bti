@@ -6,6 +6,7 @@
 
 # TODO: Optimize PDF Export Performance
 
-- [x] Create web worker for PDF generation (assets/pdf-worker.js)
+- [x] Replace problematic autoTable plugin with simple text-based PDF generation
 - [x] Add loading indicator CSS and HTML
-- [x] Update exportToPDF function to use web worker and show loading indicator
+- [x] Update exportToPDF function to use setTimeout for non-blocking generation and show loading indicator
+- [x] Remove unused web worker file (assets/pdf-worker.js)

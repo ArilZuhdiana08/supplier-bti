@@ -8,8 +8,8 @@
 
 <!-- EXPORT LIB -->
 <script src="https://cdn.jsdelivr.net/npm/xlsx/dist/xlsx.full.min.js"></script>
-<script src="https://cdn.jsdelivr.net/npm/jspdf@2.5.1/dist/jspdf.plugin.autotable.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/jspdf@2.5.1/dist/jspdf.umd.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/jspdf-autotable@3.5.25/dist/jspdf.plugin.autotable.min.js"></script>
 
 <style>
   :root{
@@ -948,9 +948,33 @@
             : 'PT. Bonecom Tricom Plant KIMU'
         ]);
 
-        doc.autoTable({
-          head: [['Waktu', 'Supplier', 'Kendaraan', 'Status', 'Lokasi']],
-          body: tableData,
+        // Create simple text-based PDF (more reliable than autoTable plugin)
+        doc.setFontSize(16);
+        doc.text('Data Check-in Supplier', 20, 20);
+
+        doc.setFontSize(12);
+        let y = 40;
+
+        // Add header
+        doc.text('No. | Waktu | Supplier | Kendaraan | Status | Lokasi', 20, y);
+        y += 10;
+        doc.line(20, y, 190, y); // horizontal line
+        y += 5;
+
+        // Add data rows
+        tableData.forEach((row, index) => {
+          if (y > 270) { // New page if needed
+            doc.addPage();
+            y = 20;
+            doc.text('No. | Waktu | Supplier | Kendaraan | Status | Lokasi', 20, y);
+            y += 10;
+            doc.line(20, y, 190, y);
+            y += 5;
+          }
+
+          const rowText = `${index + 1}. ${row.join(' | ')}`;
+          doc.text(rowText, 20, y);
+          y += 8;
         });
 
         // Generate PDF as blob and download
