@@ -41,7 +41,7 @@ exports.handler = async (event) => {
           supplier_name: body.supplier_name,
           location: body.location,
           notes: body.notes,
-          timestamp: new Date()
+          timestamp: body.timestamp ? new Date(body.timestamp) : new Date()
         }])
         .select()
 

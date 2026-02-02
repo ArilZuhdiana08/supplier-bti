@@ -1,19 +1,15 @@
-# TODO: Update Check-in Location to New Coordinates
+# TODO: Create Sample Arrival Data
 
-- [x] Update GATE_LOCATION coordinates in index.html to lat: -6.281659, lng: 107.087749, radius: 100
-- [x] Update the comment above GATE_LOCATION to reflect new coordinates
-- [x] Update the alert message in geofencing validation to reference new coordinates instead of old address
+## Tasks
+- [x] Modify checkins.js to accept custom timestamps
+- [x] Create insert-sample-data.js script with sample data
+- [ ] Run the script in browser console on admin-monitor.html
+- [ ] Verify data is inserted and visible on the website
 
-# TODO: Optimize PDF Export Performance
-
-- [x] Replace problematic autoTable plugin with simple text-based PDF generation
-- [x] Add loading indicator CSS and HTML
-- [x] Update exportToPDF function to use setTimeout for non-blocking generation and show loading indicator
-- [x] Remove unused web worker file (assets/pdf-worker.js)
-
-# TODO: Improve Mobile Responsiveness for Admin Interface
-
-- [x] Add mobile CSS media queries for better layout on small screens
-- [x] Adjust padding, font sizes, and spacing for mobile devices
-- [x] Make data tables horizontally scrollable on mobile
-- [x] Optimize filter bar and statistics cards for mobile viewing
+## Instructions
+1. Open admin-monitor.html in a web browser
+2. Open browser developer tools (F12)
+3. Go to Console tab
+4. Copy and paste the contents of insert-sample-data.js
+5. Press Enter to run the script
+6. Refresh the page to see the sample data
