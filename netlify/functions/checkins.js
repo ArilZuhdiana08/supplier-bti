@@ -56,20 +56,20 @@ exports.handler = async (event) => {
 
     if (event.httpMethod === 'DELETE') {
       const body = JSON.parse(event.body)
-      const { id } = body
+      const { timestamp } = body
 
-      if (!id) {
+      if (!timestamp) {
         return {
           statusCode: 400,
           headers,
-          body: JSON.stringify({ error: 'ID is required for deletion' })
+          body: JSON.stringify({ error: 'Timestamp is required for deletion' })
         }
       }
 
       const { error } = await supabase
         .from('checkins')
         .delete()
-        .eq('id', id)
+        .eq('timestamp', timestamp)
 
       if (error) throw error
 

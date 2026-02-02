@@ -843,7 +843,7 @@
               : 'PT. Bonecom Tricom Plant KIMU'}
             </td>
           <td>
-            <button onclick="deleteCheckin(${d.id})" class="btn-danger">Hapus</button>
+            <button onclick="deleteCheckin('${d.timestamp}')" class="btn-danger">Hapus</button>
           </td>
         </tr>
       `).join('')
@@ -1001,8 +1001,32 @@
     alert(`Waktu referensi ${supplierName} disimpan (${timeValue})`);
   }
 
+  function deleteCheckin(id) {
+    if (!confirm('Apakah Anda yakin ingin menghapus data check-in ini?')) {
+      return;
+    }
+
+    fetch('/.netlify/functions/checkins', {
+      method: 'DELETE',
+      headers: {
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify({ id })
+    })
+    .then(res => res.json())
+    .then(data => {
+      alert('Data check-in berhasil dihapus');
+      loadCheckins(); // Reload data
+    })
+    .catch(err => {
+      console.error('Error deleting checkin:', err);
+      alert('Gagal menghapus data check-in');
+    });
+  }
+
   // expose
   window.saveSupplierReference = saveSupplierReference;
+  window.deleteCheckin = deleteCheckin;
   // ================================
   // EXPORT FUNCTIONS
   // ================================
