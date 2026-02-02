@@ -6,6 +6,10 @@ self.onmessage = function(e) {
   const { data } = e.data;
 
   try {
+    // jsPDF should be available in worker global scope
+    if (typeof jsPDF === 'undefined') {
+      throw new Error('jsPDF is not available in worker');
+    }
     const doc = new jsPDF();
 
     const tableData = data.map(d => [
