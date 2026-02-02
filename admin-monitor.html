@@ -1030,6 +1030,42 @@
 
   // expose
   window.saveSupplierReference = saveSupplierReference;
+
+  // ================================
+  // DELETE RECORD
+  // ================================
+  async function deleteRecord(id) {
+    if (!confirm('Apakah Anda yakin ingin menghapus data ini?')) {
+      return;
+    }
+
+    try {
+      const res = await fetch('/.netlify/functions/checkins', {
+        method: 'DELETE',
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({ id })
+      });
+
+      if (!res.ok) {
+        throw new Error('Failed to delete record');
+      }
+
+      const result = await res.json();
+      alert('Data berhasil dihapus');
+
+      // Reload data
+      await loadCheckins();
+
+    } catch (error) {
+      console.error('Delete error:', error);
+      alert('Gagal menghapus data: ' + error.message);
+    }
+  }
+
+  // expose
+  window.deleteRecord = deleteRecord;
   // ================================
   // EXPORT FUNCTIONS
   // ================================
