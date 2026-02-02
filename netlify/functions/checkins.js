@@ -35,12 +35,40 @@ exports.handler = async (event) => {
     if (event.httpMethod === 'POST') {
       const body = JSON.parse(event.body)
 
+      // Get supplier reference time
+      const { data: refData, error: refError } = await supabase
+        .from('supplier_references')
+        .select('reference_time')
+        .eq('supplier_name', body.supplier_name)
+        .single()
+
+      let status = 'Tepat waktu' // default status
+
+      if (!refError && refData?.reference_time) {
+        const referenceTime = refData.reference_time
+        const arrivalTime = new Date()
+        const [refHours, refMinutes] = referenceTime.split(':').map(Number)
+        const refDateTime = new Date()
+        refDateTime.setHours(refHours, refMinutes, 0, 0)
+
+        const timeDiff = (arrivalTime - refDateTime) / (1000 * 60) // difference in minutes
+
+        if (timeDiff < 0) {
+          status = 'Advance' // arrived before reference time
+        } else if (timeDiff <= 10) {
+          status = 'Tepat waktu' // within 10 minutes tolerance
+        } else {
+          status = 'Delay' // more than 10 minutes late
+        }
+      }
+
       const { data, error } = await supabase
         .from('checkins')
         .insert([{
           supplier_name: body.supplier_name,
           location: body.location,
           notes: body.notes,
+          status: status,
           timestamp: new Date()
         }])
         .select()
