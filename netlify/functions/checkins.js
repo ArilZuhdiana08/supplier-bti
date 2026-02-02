@@ -66,12 +66,21 @@ exports.handler = async (event) => {
         }
       }
 
-      const { error } = await supabase
+      const { data, error } = await supabase
         .from('checkins')
         .delete()
         .eq('timestamp', timestamp)
+        .select()
 
       if (error) throw error
+
+      if (!data || data.length === 0) {
+        return {
+          statusCode: 404,
+          headers,
+          body: JSON.stringify({ error: 'Check-in not found or already deleted' })
+        }
+      }
 
       return {
         statusCode: 200,
