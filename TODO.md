@@ -10,3 +10,10 @@
 - [x] Add loading indicator CSS and HTML
 - [x] Update exportToPDF function to use setTimeout for non-blocking generation and show loading indicator
 - [x] Remove unused web worker file (assets/pdf-worker.js)
+
+# TODO: Improve Mobile Responsiveness for Admin Interface
+
+- [x] Add mobile CSS media queries for better layout on small screens
+- [x] Adjust padding, font sizes, and spacing for mobile devices
+- [x] Make data tables horizontally scrollable on mobile
+- [x] Optimize filter bar and statistics cards for mobile viewing

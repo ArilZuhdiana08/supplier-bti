@@ -491,6 +491,77 @@
     font-weight: 500;
   }
 
+  /* Mobile Responsiveness */
+  @media (max-width: 768px) {
+    main {
+      padding: 84px 10px 20px;
+    }
+
+    .filter-bar {
+      padding: 15px;
+      gap: 10px;
+    }
+
+    .filter-bar input,
+    .filter-bar select,
+    .filter-bar button {
+      min-width: 120px;
+      font-size: 14px;
+    }
+
+    .card {
+      overflow-x: auto;
+      -webkit-overflow-scrolling: touch;
+    }
+
+    table {
+      min-width: 600px;
+      font-size: 12px;
+    }
+
+    thead th {
+      padding: 8px 6px;
+      font-size: 11px;
+    }
+
+    tbody td {
+      padding: 10px 6px;
+      font-size: 12px;
+      white-space: nowrap;
+    }
+
+    .status-badge {
+      font-size: 10px;
+      padding: 4px 8px;
+    }
+
+    .stats-grid {
+      grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+      gap: 15px;
+    }
+
+    .stat-card {
+      padding: 16px;
+    }
+
+    .stat-content h3 {
+      font-size: 24px;
+    }
+
+    .monthly-stats {
+      padding: 16px;
+    }
+
+    .supplier-ranking {
+      grid-template-columns: 1fr;
+    }
+
+    .ranking-item {
+      padding: 10px 12px;
+      font-size: 14px;
+    }
+  }
+
 </style>
 </head>
 
