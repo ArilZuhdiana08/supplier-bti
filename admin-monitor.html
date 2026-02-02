@@ -845,6 +845,61 @@
   // expose
   window.saveSupplierReference = saveSupplierReference;
   // ================================
+  // EXPORT FUNCTIONS
+  // ================================
+  function exportToExcel(data) {
+    if (!data.length) {
+      alert('Tidak ada data untuk diekspor');
+      return;
+    }
+
+    const ws = XLSX.utils.json_to_sheet(data.map(d => ({
+      Waktu: new Date(d.timestamp).toLocaleString(),
+      Supplier: d.supplier_name,
+      Kendaraan: d.vehicle_no || '-',
+      Status: d.status || 'Tepat waktu',
+      Lokasi: d.location?.lat && d.location?.lng
+        ? `${d.location.lat},${d.location.lng}`
+        : 'PT. Bonecom Tricom Plant KIMU'
+    })));
+
+    const wb = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb, ws, 'Checkins');
+    XLSX.writeFile(wb, 'checkins.xlsx');
+  }
+
+  function exportToPDF(data) {
+    if (!data.length) {
+      alert('Tidak ada data untuk diekspor');
+      return;
+    }
+
+    const { jsPDF } = window.jspdf;
+    const doc = new jsPDF();
+
+    const tableData = data.map(d => [
+      new Date(d.timestamp).toLocaleString(),
+      d.supplier_name,
+      d.vehicle_no || '-',
+      d.status || 'Tepat waktu',
+      d.location?.lat && d.location?.lng
+        ? `${d.location.lat},${d.location.lng}`
+        : 'PT. Bonecom Tricom Plant KIMU'
+    ]);
+
+    doc.autoTable({
+      head: [['Waktu', 'Supplier', 'Kendaraan', 'Status', 'Lokasi']],
+      body: tableData,
+    });
+
+    doc.save('checkins.pdf');
+  }
+
+  // Attach event listeners to export buttons
+  exportExcelBtn.onclick = () => exportToExcel(filteredData);
+  exportPdfBtn.onclick = () => exportToPDF(filteredData);
+
+  // ================================
   // INIT
   // ================================
   loadCheckins();
