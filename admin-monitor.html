@@ -345,6 +345,14 @@
     pointer-events:none;
     cursor: not-allowed;
   }
+  .btn-danger{
+    background: var(--danger);
+    color:#fff;
+  }
+  .btn-danger:hover{
+    transform: translateY(-1px);
+    box-shadow: 0 4px 12px rgba(255, 107, 107, 0.3);
+  }
   .card{
     background: var(--card);
     border-radius: 12px;
@@ -515,7 +523,7 @@
     }
 
     table {
-      min-width: 600px;
+      min-width: 700px;
       font-size: 12px;
     }
 
@@ -715,6 +723,7 @@
             <th>Kendaraan</th>
             <th>Status</th>
             <th>Lokasi</th>
+            <th>Aksi</th>
           </tr>
         </thead>
         <tbody id="tbody"></tbody>
@@ -833,9 +842,12 @@
               ? `${d.location.lat},${d.location.lng}`
               : 'PT. Bonecom Tricom Plant KIMU'}
             </td>
+          <td>
+            <button onclick="deleteCheckin(${d.id})" class="btn-danger">Hapus</button>
+          </td>
         </tr>
       `).join('')
-      : `<tr><td colspan="5">Tidak ada data</td></tr>`;
+      : `<tr><td colspan="6">Tidak ada data</td></tr>`;
   }
 
   // ================================

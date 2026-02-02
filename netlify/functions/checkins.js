@@ -9,7 +9,7 @@ exports.handler = async (event) => {
   const headers = {
     'Access-Control-Allow-Origin': '*',
     'Access-Control-Allow-Headers': 'Content-Type',
-    'Access-Control-Allow-Methods': 'GET, POST, OPTIONS'
+    'Access-Control-Allow-Methods': 'GET, POST, DELETE, OPTIONS'
   }
 
   if (event.httpMethod === 'OPTIONS') {
@@ -51,6 +51,32 @@ exports.handler = async (event) => {
         statusCode: 201,
         headers,
         body: JSON.stringify(data[0])
+      }
+    }
+
+    if (event.httpMethod === 'DELETE') {
+      const body = JSON.parse(event.body)
+      const { id } = body
+
+      if (!id) {
+        return {
+          statusCode: 400,
+          headers,
+          body: JSON.stringify({ error: 'ID is required for deletion' })
+        }
+      }
+
+      const { error } = await supabase
+        .from('checkins')
+        .delete()
+        .eq('id', id)
+
+      if (error) throw error
+
+      return {
+        statusCode: 200,
+        headers,
+        body: JSON.stringify({ message: 'Check-in deleted successfully' })
       }
     }
 
