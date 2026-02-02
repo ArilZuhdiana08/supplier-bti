@@ -445,6 +445,52 @@
     box-shadow: 0 4px 12px rgba(102, 126, 234, 0.3);
   }
 
+  /* Loading Indicator */
+  .loading-overlay{
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: rgba(0,0,0,0.5);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 10000;
+    opacity: 0;
+    visibility: hidden;
+    transition: all 0.3s ease;
+  }
+  .loading-overlay.show{
+    opacity: 1;
+    visibility: visible;
+  }
+  .loading-content{
+    background: white;
+    padding: 30px;
+    border-radius: 12px;
+    text-align: center;
+    box-shadow: 0 20px 40px rgba(0,0,0,0.3);
+  }
+  .loading-spinner{
+    width: 40px;
+    height: 40px;
+    border: 4px solid #f3f3f3;
+    border-top: 4px solid var(--primary-solid);
+    border-radius: 50%;
+    animation: spin 1s linear infinite;
+    margin: 0 auto 20px;
+  }
+  @keyframes spin {
+    0% { transform: rotate(0deg); }
+    100% { transform: rotate(360deg); }
+  }
+  .loading-text{
+    color: var(--text);
+    font-size: 16px;
+    font-weight: 500;
+  }
+
 </style>
 </head>
 
@@ -483,6 +529,14 @@
 
 <!-- Menu Overlay -->
 <div class="menu-overlay" id="menu-overlay"></div>
+
+<!-- Loading Overlay -->
+<div class="loading-overlay" id="loading-overlay">
+  <div class="loading-content">
+    <div class="loading-spinner"></div>
+    <div class="loading-text">Membuat PDF...</div>
+  </div>
+</div>
 
 <main>
   <!-- Statistics Section -->
@@ -874,25 +928,44 @@
       return;
     }
 
-    const { jsPDF } = window.jspdf;
-    const doc = new jsPDF();
+    // Show loading indicator
+    const loadingOverlay = document.getElementById('loading-overlay');
+    loadingOverlay.classList.add('show');
 
-    const tableData = data.map(d => [
-      new Date(d.timestamp).toLocaleString(),
-      d.supplier_name,
-      d.vehicle_no || '-',
-      d.status || 'Tepat waktu',
-      d.location?.lat && d.location?.lng
-        ? `${d.location.lat},${d.location.lng}`
-        : 'PT. Bonecom Tricom Plant KIMU'
-    ]);
+    // Create web worker
+    const worker = new Worker('assets/pdf-worker.js');
 
-    doc.autoTable({
-      head: [['Waktu', 'Supplier', 'Kendaraan', 'Status', 'Lokasi']],
-      body: tableData,
-    });
+    worker.postMessage({ data });
 
-    doc.save('checkins.pdf');
+    worker.onmessage = function(e) {
+      const { success, blob, error } = e.data;
+
+      // Hide loading indicator
+      loadingOverlay.classList.remove('show');
+
+      if (success) {
+        // Create download link for the blob
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = 'checkins.pdf';
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+        URL.revokeObjectURL(url);
+      } else {
+        alert('Gagal membuat PDF: ' + error);
+      }
+
+      worker.terminate();
+    };
+
+    worker.onerror = function(error) {
+      // Hide loading indicator
+      loadingOverlay.classList.remove('show');
+      alert('Terjadi kesalahan saat membuat PDF');
+      worker.terminate();
+    };
   }
 
   // Attach event listeners to export buttons
