@@ -345,20 +345,6 @@
     pointer-events:none;
     cursor: not-allowed;
   }
-  .btn-delete{
-    background: var(--danger);
-    color: white;
-    border: none;
-    border-radius: 6px;
-    padding: 6px 10px;
-    cursor: pointer;
-    font-size: 14px;
-    transition: all 0.3s ease;
-  }
-  .btn-delete:hover{
-    background: var(--danger-solid);
-    transform: scale(1.1);
-  }
   .card{
     background: var(--card);
     border-radius: 12px;
@@ -574,47 +560,6 @@
       padding: 10px 12px;
       font-size: 14px;
     }
-
-    /* Supplier Reference Mobile */
-    .supplier-reference-item {
-      flex-direction: column;
-      align-items: stretch;
-      gap: 12px;
-      padding: 16px;
-    }
-
-    .supplier-reference-item .supplier-name {
-      font-size: 14px;
-      text-align: center;
-      margin-bottom: 8px;
-    }
-
-    .supplier-reference-item input[type="time"] {
-      padding: 10px 12px;
-      font-size: 16px; /* Prevent zoom on iOS */
-      width: 100%;
-      text-align: center;
-    }
-
-    .supplier-reference-item button {
-      padding: 10px 16px;
-      font-size: 14px;
-      width: 100%;
-    }
-
-    .card[style*="padding: 30px"] {
-      padding: 20px !important;
-    }
-
-    .card h2 {
-      font-size: 18px;
-      margin-bottom: 16px;
-    }
-
-    .card p {
-      font-size: 14px;
-      margin-bottom: 20px;
-    }
   }
 
 </style>
@@ -748,7 +693,6 @@
             <th>Kendaraan</th>
             <th>Status</th>
             <th>Lokasi</th>
-            <th>Aksi</th>
           </tr>
         </thead>
         <tbody id="tbody"></tbody>
@@ -867,14 +811,9 @@
               ? `${d.location.lat},${d.location.lng}`
               : 'PT. Bonecom Tricom Plant KIMU'}
             </td>
-          <td>
-            <button class="btn-delete" onclick="deleteRecord(${d.id})" title="Hapus data">
-              🗑️
-            </button>
-          </td>
         </tr>
       `).join('')
-      : `<tr><td colspan="6">Tidak ada data</td></tr>`;
+      : `<tr><td colspan="5">Tidak ada data</td></tr>`;
   }
 
   // ================================
@@ -1030,42 +969,6 @@
 
   // expose
   window.saveSupplierReference = saveSupplierReference;
-
-  // ================================
-  // DELETE RECORD
-  // ================================
-  async function deleteRecord(id) {
-    if (!confirm('Apakah Anda yakin ingin menghapus data ini?')) {
-      return;
-    }
-
-    try {
-      const res = await fetch('/.netlify/functions/checkins', {
-        method: 'DELETE',
-        headers: {
-          'Content-Type': 'application/json'
-        },
-        body: JSON.stringify({ id })
-      });
-
-      if (!res.ok) {
-        throw new Error('Failed to delete record');
-      }
-
-      const result = await res.json();
-      alert('Data berhasil dihapus');
-
-      // Reload data
-      await loadCheckins();
-
-    } catch (error) {
-      console.error('Delete error:', error);
-      alert('Gagal menghapus data: ' + error.message);
-    }
-  }
-
-  // expose
-  window.deleteRecord = deleteRecord;
   // ================================
   // EXPORT FUNCTIONS
   // ================================
