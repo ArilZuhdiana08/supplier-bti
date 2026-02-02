@@ -54,6 +54,32 @@ exports.handler = async (event) => {
       }
     }
 
+    if (event.httpMethod === 'DELETE') {
+      const body = JSON.parse(event.body)
+      const { id } = body
+
+      if (!id) {
+        return {
+          statusCode: 400,
+          headers,
+          body: JSON.stringify({ error: 'ID is required for deletion' })
+        }
+      }
+
+      const { error } = await supabase
+        .from('checkins')
+        .delete()
+        .eq('id', id)
+
+      if (error) throw error
+
+      return {
+        statusCode: 200,
+        headers,
+        body: JSON.stringify({ message: 'Record deleted successfully' })
+      }
+    }
+
     return {
       statusCode: 405,
       headers,

@@ -345,6 +345,20 @@
     pointer-events:none;
     cursor: not-allowed;
   }
+  .btn-delete{
+    background: var(--danger);
+    color: white;
+    border: none;
+    border-radius: 6px;
+    padding: 6px 10px;
+    cursor: pointer;
+    font-size: 14px;
+    transition: all 0.3s ease;
+  }
+  .btn-delete:hover{
+    background: var(--danger-solid);
+    transform: scale(1.1);
+  }
   .card{
     background: var(--card);
     border-radius: 12px;
@@ -734,6 +748,7 @@
             <th>Kendaraan</th>
             <th>Status</th>
             <th>Lokasi</th>
+            <th>Aksi</th>
           </tr>
         </thead>
         <tbody id="tbody"></tbody>
@@ -852,9 +867,14 @@
               ? `${d.location.lat},${d.location.lng}`
               : 'PT. Bonecom Tricom Plant KIMU'}
             </td>
+          <td>
+            <button class="btn-delete" onclick="deleteRecord(${d.id})" title="Hapus data">
+              🗑️
+            </button>
+          </td>
         </tr>
       `).join('')
-      : `<tr><td colspan="5">Tidak ada data</td></tr>`;
+      : `<tr><td colspan="6">Tidak ada data</td></tr>`;
   }
 
   // ================================
